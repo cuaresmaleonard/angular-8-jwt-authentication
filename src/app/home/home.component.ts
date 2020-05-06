@@ -10,9 +10,11 @@ import { HttpHeaders, HttpClient } from '@angular/common/http';
 export class HomeComponent {
     loading = false;
     users: User[];
+ 
     postId;
     url_get;
     url_post;
+ 
 
     constructor(private userService: UserService, private http: HttpClient) { }
 
@@ -22,21 +24,61 @@ export class HomeComponent {
             this.loading = false;
             this.users = users;
         });
+
+        console.log(this.userService.getAll());
  
-        this.url_get = 'http://182.18.194.188/meralcoadvisory/get-by-date-and-city/Nov%2001,%202019/Dec%2031,%202019';
-        this.url_post = 'http://182.18.194.188/nms/analytics/get_associated_accounts';
+ 
+        this.url_get = 'http://182.18.194.188/nms/cmts/dashboard_drop_list';
+        this.url_post = 'http://182.18.194.188/nms/authbasic/get_associated_accounts';
 
-        const headers = { 'Content-Type':  'application/json', 'Cookie': 'auth=1249; token=%2231f227fe13a5dfa5b8aafc7e8ae29c82811517f337ec3ce39c495cc0a5ef6d4a41ba359d1d8d0d12de26e28814264ab9dce4808e4076f4e5b51483914250c96710d057bfd7ae%22; department_id=4' };
+        const body = {acct_no: "678422738", type: true}; 
 
-        const body = {acct_no: "678422738", type: true};
-
-        this.http.post<any>(this.url_post, body, { headers }).subscribe(data => {
+         // const body = {acct_no: "678422738", type: true};
+     
+        this.http.post<any>(this.url_post, body).subscribe(data => {
             this.postId = data;
+            console.log(this.postId);
         });
-        
-        this.http.get<any>(this.url_get).subscribe(data => {
-            this.postId = data;
-        });
+         
+        // this.http.get<any>(this.url_get, {headers} ).subscribe(data => {
+        //     this.postId = data;
+        // }); 
+
+        this.loadJSChecker();
 
     }
+
+    loadJSChecker()
+    {
+        if (window.addEventListener)
+        {
+            addEventListener('load', this.loadJSAtOnload, false);
+        }
+        else if ((<any>window).attachEvent)
+        {
+            (<any>window).attachEvent('onload', this.loadJSAtOnload);
+        }
+        else 
+        {
+            window.onload = this.loadJSAtOnload;
+        }
+    }
+
+    loadJSAtOnload() {
+        var scripts = [
+            "/assets/style/vendor/chart.js/Chart.min.js",
+            "/assets/style/js/charts-home.js"
+        ];
+
+        for (var i = 0; i < scripts.length; i++) {
+            console.log('Loading script ' + scripts[i]);
+            var scriptType = document.createElement('script');
+            scriptType.src = scripts[i];
+            document.body.appendChild(scriptType);  
+        }
+
+    };
+
+
+
 }

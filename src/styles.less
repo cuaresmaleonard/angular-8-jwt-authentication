@@ -1,2 +1,39 @@
 /* You can add global styles to this file, and also import other style files */
 a { cursor: pointer }
+
+#spinner-back {
+	position: fixed;
+	top: 0;
+	left: 0;
+	opacity: 0;
+	width: 100%;
+	transition: all 1s;
+	opacity:0.5;
+}
+#spinner-front {
+	position: fixed;
+	top: 0;
+	left: 0;
+	opacity: 0;
+	transition: all 1s;
+	left: 49%;
+}
+
+#spinner-front {
+  z-index: 999;
+  margin-top: 45vh;
+  color: #fff;
+  text-align: center;
+}
+
+#spinner-back {
+  z-index: 998;
+  height: 100vh;
+  background: #000;
+}
+
+.w-100 {
+	width: 100% !important;
+}
+
+ 

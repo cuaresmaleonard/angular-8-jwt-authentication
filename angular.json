@@ -30,7 +30,12 @@
             "styles": [
               "src/styles.less"
             ],
-            "scripts": []
+            "scripts": [
+              // "node_modules/jquery/dist/jquery.min.js",
+              "src/assets/javascripts/chart/chart-generate.js",
+              "src/assets/javascripts/amcharts.js",
+              "src/assets/javascripts/serial.js",        
+            ]
           },
           "configurations": {
             "production": {

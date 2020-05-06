@@ -12,18 +12,26 @@ import { appRoutingModule } from './app.routing';
 import { JwtInterceptor, ErrorInterceptor } from './_helpers';
 import { HomeComponent } from './home';
 import { LoginComponent } from './login';
+import { AnalyticsComponent } from './analytics/analytics.component';
+import { IncidentsComponent } from './incidents/incidents.component';
+import { PathtrakComponent } from './pathtrak/pathtrak.component';
+import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 
 @NgModule({
     imports: [
         BrowserModule,
         ReactiveFormsModule,
         HttpClientModule,
-        appRoutingModule
+        appRoutingModule,
+        NgbModule
     ],
     declarations: [
         AppComponent,
         HomeComponent,
-        LoginComponent
+        LoginComponent,
+        AnalyticsComponent,
+        IncidentsComponent,
+        PathtrakComponent  
     ],
     providers: [
         { provide: HTTP_INTERCEPTORS, useClass: JwtInterceptor, multi: true },
@@ -34,4 +42,5 @@ import { LoginComponent } from './login';
     ],
     bootstrap: [AppComponent]
 })
+
 export class AppModule { }

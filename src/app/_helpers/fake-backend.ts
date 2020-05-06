@@ -33,17 +33,19 @@ export class FakeBackendInterceptor implements HttpInterceptor {
 
         // route functions
 
-        function authenticate() {
+        function authenticate() { // deprecated
             const { username, password } = body;
             const user = users.find(x => x.username === username && x.password === password);
+
             if (!user) return error('Username or password is incorrect');
             return ok({
                 id: user.id,
                 username: user.username,
                 firstName: user.firstName,
                 lastName: user.lastName,
-                token: 'fake-jwt-token'
+                token: btoa('legcuaresma' + ':' +'leonardo'),
             })
+
         }
 
         function getUsers() {
@@ -66,7 +68,11 @@ export class FakeBackendInterceptor implements HttpInterceptor {
         }
 
         function isLoggedIn() {
-            return headers.get('Authorization') === 'Bearer fake-jwt-token';
+            // return headers.get('Authorization') === 'Basic '+btoa('legcuaresma' + ':' +'leonardo');
+
+            if ( JSON.parse(localStorage.getItem('currentUser')) ) {
+                return true;
+            }
         }
     }
 }

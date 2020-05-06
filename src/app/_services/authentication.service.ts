@@ -1,6 +1,6 @@
 ﻿import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, throwError } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 import { environment } from '@environments/environment';
@@ -21,12 +21,29 @@ export class AuthenticationService {
     }
 
     login(username: string, password: string) {
-        return this.http.post<any>(`${environment.apiUrl}/users/authenticate`, { username, password })
+
+        return this.http.post<any>(`http://182.18.194.188/nms/authbasic/api/user/validate`, { username, password, "type": "web" })
             .pipe(map(user => {
-                // store user details and jwt token in local storage to keep user logged in between page refreshes
-                localStorage.setItem('currentUser', JSON.stringify(user));
-                this.currentUserSubject.next(user);
-                return user;
+
+                if (user.status == "success") {
+
+                    user = {
+                        id: user.data.id,
+                        username: username,
+                        firstName: user.data.FNAME,
+                        lastName: user.data.LNAME,
+                        token: btoa(username + ':' +password),
+                    };
+
+                    // store user details and jwt token in local storage to keep user logged in between page refreshes
+                    localStorage.setItem('currentUser', JSON.stringify(user));
+                    this.currentUserSubject.next(user);
+                    return user;
+                }
+                else {
+                    throw new Error('Username or password is incorrect');
+                }
+
             }));
     }
 
