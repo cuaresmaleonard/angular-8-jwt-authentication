@@ -5,6 +5,7 @@ import { AuthenticationService } from '../_services';
 import { User } from '../_models';
 import * as moment from 'moment';
 import * as jquery from 'jquery';
+import { ActivatedRoute } from '@angular/router';
 
 declare function test_f(): any;
 declare var AmCharts: any;
@@ -26,14 +27,30 @@ export class AnalyticsComponent implements OnInit {
 	cm_parameters;
 	cpeChannels;
 
+	//drop plant core status indicator
+	drop_status = "";
+	plant_status = "";
+	core_status = "";
+
 	// account
-	recent_searches;
+	recent_searches = [];
+	pinned_searches = [];
 
 	// plant
 	upstream;
-	
+	upstream_raw;
+	port_array = [];
+
+	// core
+	summaryupstream;
+	port_sample;
+	downstream;
+	downstream_summary;
+	downstream_raw;
 	// others
 	port_active = 0;
+	portds_active = 0;
+	status_info;
 
 	// options
  
@@ -41,13 +58,22 @@ export class AnalyticsComponent implements OnInit {
 		spanSelect: new FormControl(''),
   	});
 
-	span_options = [
+	span_options_drop = [
 			{val:"d", text_val: "3 Days"}, 
 			{val:"live", text_val: "Live"}, 
+			{val:"1", text_val: "24 Hours"}, 
+			{val:"w", text_val: "1 Week"},
+			{val:"m", text_val: "1 Month"},
+		];	
+
+	span_options_plant = [
+			{val:"d", text_val: "3 Days"}, 
 			{val:"24h", text_val: "24 Hours"}, 
 			{val:"w", text_val: "1 Week"},
 			{val:"m", text_val: "1 Month"},
 		];	
+	
+
 
 	// chart
 	chart_hist = false;
@@ -57,14 +83,18 @@ export class AnalyticsComponent implements OnInit {
 	public currentUserInfo;
 	currentUser: User;
 
-	constructor(private http: HttpClient, private authenticationService: AuthenticationService) { 
+	constructor(private http: HttpClient, private authenticationService: AuthenticationService, private activatedRoute: ActivatedRoute) { 
 		this.authenticationService.currentUser.subscribe(x => this.currentUser = x);
 		this.currentUserInfo = this.authenticationService.currentUser.source['_value'];
 	}
+
+	init1;
+	init2;
   
 	ngOnInit() {
-		this.loader = false;
+
 		this.recentSearchInit();
+		this.pinnedSearchInit();
 
 		/// popover for tx rx snr fec
 		$('[data-toggle="popover"]').popover();
@@ -82,13 +112,41 @@ export class AnalyticsComponent implements OnInit {
 
 		this.http.post<any>('http://182.18.194.188/nms/authbasic/view_search_analytics', []).subscribe(data => {
 			this.recent_searches = data;
-			this.loader = false;
+
+			this.init1 = true;
+			this.oninitLoader();
 		});
 
 	}
 
+	pinnedSearchInit() {
+
+	    this.http.post<any>('http://182.18.194.188/nms/authbasic/view_pinned_analytics', []).subscribe(data => {
+	      this.pinned_searches = data.raw;
+
+	      this.init2 = true;
+	      this.oninitLoader();
+	    });
+
+	}
+
+	
+
+	account_search_request1;
+	account_search_request2;
+	account_search_request3; 
+	account_search_request4;
+	account_search_request5;
+	account_search_request6;
+
 	accountSearch() {
 		this.loader = true;
+		this.account_search_request1 = false;
+		this.account_search_request2 = false;
+		this.account_search_request3 = false; 
+		this.account_search_request4 = false;
+		this.account_search_request5 = false;
+		this.account_search_request6 = false;
 
 		if ( this.accountSearchForm.value.account_number.trim() != "" && this.accountSearchForm.value.account_number.trim().length == 9 ) 
 		{
@@ -97,7 +155,7 @@ export class AnalyticsComponent implements OnInit {
 			
 			this.http.post<any>('http://182.18.194.188/nms/authbasic/get_associated_accounts', body).subscribe(data => {
 			    this.result = data;
-			    this.loader = false;
+			    // this.loader = false;
 
 			    if (this.result.length == 1) 
 			    {
@@ -106,38 +164,85 @@ export class AnalyticsComponent implements OnInit {
 			    	$('#acctinfo-tab').click();
 
 			    	const body = {cm_id: this.cm_id, user_id: this.currentUserInfo.id, duration: 0, type: true};
-
+			    	// account_search_request1
 			    	this.http.post<any>('http://182.18.194.188/nms/authbasic/cm_info', body).subscribe(data => {
 			    		this.cm_info_result = data;
-			    		this.loader = false;
 			    		this.cm_info = this.cm_info_result[0][0];
 			    		this.cm_parameters = this.cm_info_result[1];
-		
-			    		// drop graph
-			    		this.getHistoricGraph('d', 'view', '');	    	
+						// console.log(this.cm_parameters);
+						this.account_search_request1 = true;
+						this.accountSearchLoader();
+			    		// drop graph // function transfered to nav buttons
+			    		// this.getHistoricGraph('d', 'view', '', 'drop'); // function transfered to nav buttons	
+
+			    		// drop status indicator
+			    		this.drop_status = this.cm_parameters.drop_status;
 		    		});
 
 		    		const cpeChannels_body = {cm_id: this.cm_id};
-
+		    		// account_search_request2
 		    		this.http.post<any>('http://182.18.194.188/nms/authbasic/cpeChannels', cpeChannels_body).subscribe(data => {
 			    		this.cpeChannels_result = data;
-			    		this.loader = false;
 			    		this.cpeChannels = this.cpeChannels_result;
+
+			    		this.account_search_request2 = true;
+			    		this.accountSearchLoader();
 		    		});
 
-		    		// this.http.get<any>('http://182.18.194.188/nms/authbasic/summaryupstream/'+this.cm_id).subscribe(data => {
-		    		// 	console.log(data);
-		    		// });	    		
+		    		this.http.get<any>('http://182.18.194.188/nms/authbasic/summaryupstream/'+this.cm_id).subscribe(data => {
+		    			this.summaryupstream = data;
+		    			this.port_sample = this.summaryupstream.ports[0];
+
+		    			this.account_search_request4 = true;
+		    			this.accountSearchLoader();
+		    		});	    		
 
 		    		const upstream_body = {postData:[]}
-
+		    		// account_search_request3
 		    		this.http.post<any>('http://182.18.194.188/nms/authbasic/upstream/'+this.cm_id+'.3', upstream_body).subscribe(data => {
-		    			this.loader = false;  
 		    			this.upstream = data.stream_data;
+
+		    // 			var resultArray = $.map(this.upstream, function(value, index) { return [value]; });
+						// this.upstream = resultArray.sort();
+		    			// console.log(this.upstream);
+
+		    			this.upstream_raw = data;
+
+		    			this.createPortArray(this.upstream);
+		    			this.account_search_request3 = true;
+		    			this.accountSearchLoader();
+		    			// plant graph // function transfered to nav buttons
+		    			// this.cmtsNUSGraph(this.upstream_raw); // function transfered to nav buttons
+		    			// this.getCMTSStream('upstream_neighbor', 'plant'); // function transfered to nav buttons
+
+		    			// plant status indicator
+		    			this.plant_status = this.upstream_raw.plant_status;
 		    		});
+
+		    		// core downstream data
+		    		const downstream_body = {postData:[]}
+		    		this.http.post<any>('http://182.18.194.188/nms/authbasic/api/downstream/'+this.cm_id+'.3.list', downstream_body).subscribe(data => {
+		    			this.downstream = data.stream_data;
+		    			this.downstream_summary = data.ds_summary;
+		    			this.downstream_raw = data;
+
+		    			this.account_search_request5 = true;
+		    			this.accountSearchLoader();
+		    		});
+
+		    		//summaryupstream
+		    		this.http.get<any>('http://182.18.194.188/nms/authbasic/api/summaryupstream/'+this.cm_id+'.3.list').subscribe(data => {
+		    			this.status_info = data;
+
+		    			this.account_search_request6 = true;
+		    			this.accountSearchLoader();
+		    		});
+
 		    		
+
 			    }
 			    else {
+			    	this.loader = false;
 			    	$('.toast').toast('show');
 			    }
 
@@ -153,6 +258,54 @@ export class AnalyticsComponent implements OnInit {
 
 	}
 
+	// Preserve original property order
+  	unsorted() { }
+
+	createPortArray(upstream_raw)
+	{
+		var self = this;
+		this.port_array = [];
+		for (var key in upstream_raw) 
+		{
+			self.port_array.push(key.trim());
+		}
+	}
+
+	oninitLoader()
+	{
+		var init1 = this.init1;
+		var init2 = this.init2;
+
+		if (init1 && init2) 
+		{
+			this.loader = false;
+		}
+		else 
+		{
+			this.loader = true;
+		}
+	}
+
+	// checks if all requests are finished then close the loader if all requests are done
+	accountSearchLoader()
+	{
+		var search1 = this.account_search_request1;
+		var search2 = this.account_search_request2;
+		var search3 = this.account_search_request3;
+		var search4 = this.account_search_request4;
+		var search5 = this.account_search_request5;
+		var search6 = this.account_search_request6;
+
+		if (search1 && search2 && search3 && search4 && search5 && search6) 
+		{
+			this.loader = false;
+		}
+		else 
+		{
+			this.loader = true;
+		}
+	}
+
 	selectAccountSearch(account_number)
 	{
         this.accountSearchForm.patchValue({
@@ -162,9 +315,56 @@ export class AnalyticsComponent implements OnInit {
     	this.accountSearch();
 	}
 
-	portRow(key)
+	portDS(key, category)
 	{
-		this.port_active = key; 
+		this.portds_active = key;
+
+		this.getCMTSStream('downstream_neighbor', category, key);
+	}
+
+	selectedSpanCore;
+	selectedSpanDSCore = 3;
+
+	portRow(key, category)
+	{
+		this.loader = true;
+		this.port_active = key;
+
+		new Promise<any>((res, rej) => {
+			// graph creation
+			if (category == 'plant') {
+				this.getCMTSStream('upstream_neighbor', category, '');
+			}
+
+			res(true);
+		})
+		.then(res => {
+			setTimeout(()=>{    //<<<---    using ()=> syntax
+				if (category == 'plant') {
+					this.upstreamView(category, key);
+				} else if (category == 'core') {
+					var postdata = [];
+					this.selectedSpanCore = "3";
+					this.getCMTSGraphData(this.cm_id, "us", 3, postdata, 'port_change');
+					this.portDS(0, 'core');
+					
+					// this.getCMTSGraphData(this.cm_id, "us", undefined, undefined);
+				}
+			      
+		 	}, 1500); 
+		})
+		  .then(res => {  
+			setTimeout(()=>{    //<<<---    using ()=> syntax
+				  // console.log(key);
+			      this.loader = false;
+		 	}, 1500);
+		})
+		  .catch(error => {
+			console.log('ERROR:', error.message);
+			this.loader = false;
+		});
+    	// this.activatedRoute.url.subscribe(url => console.log('The URL changed to: ' + url));
+
 	}
 
 	resetCM()
@@ -172,8 +372,39 @@ export class AnalyticsComponent implements OnInit {
 		const resetCm_body = {ip: this.cm_info.ip_add, cmts: this.cm_info.cmts };
 
 		this.http.post<any>('http://182.18.194.188/nms/authbasic/reset_cm', resetCm_body).subscribe(data => {
-			console.log(data);
+
+			this.checkCM();
 		});
+	}
+
+	testinterval;
+	ping_reset = [];
+	ping_visibility = false;
+
+	checkCM()
+	{
+    	const body = {cm_id: this.cm_id, user_id: this.currentUserInfo.id, duration: 0, type: true};
+
+     	this.http.post<any>('http://182.18.194.188/nms/authbasic/cm_info', body).subscribe(data => {
+     		this.cm_info_result = data;
+     		this.cm_info = this.cm_info_result[0][0];
+     		this.cm_parameters = this.cm_info_result[1];
+
+     		this.ping_reset.push(this.cm_parameters.ping);
+     		console.log(this.ping_reset);
+     		if(data[1].ping == 0 || data[1].tx == 0) {
+     			this.ping_visibility = true;
+     			this.checkCM();
+     		}
+     		else
+     		{
+     			this.ping_visibility = false;
+     			this.ping_reset = [];
+     		}
+
+ 		});
+ 
+
 	}
 
 	stringToDate(str) {
@@ -187,10 +418,12 @@ export class AnalyticsComponent implements OnInit {
 	hsf_time_value;
 	hef_value;
 	hef_time_value;
+	drop_graph_data;
 
-	getHistoricGraph(type, display, level){
+	getHistoricGraph(type, display, level, category){
 		var cm_id = this.cm_id;
  		this.getLiveGraph('pause');
+ 		this.loader = true;
 
 		if(cm_id){
 			if(display == "change"){
@@ -201,158 +434,71 @@ export class AnalyticsComponent implements OnInit {
 					this.chart_live = true;
 					this.chart_hist = false;
 					this.getLiveGraph('run');
+					this.loader = false;
 				}
-				else if (type == "d")
+				else if (type == "d" || type == "w" || type == "m" || type == "1")
 				{
 					this.chart_live = false;
 					this.chart_hist = true;
 					const cpeChannels_body = {cm_id: this.cm_id, type: type, start: "", end:"" };
 
 		    		this.http.post<any>('http://182.18.194.188/nms/authbasic/graph_data', cpeChannels_body).subscribe(data => {
-		    			this.cmHistoricGraph(data);  
+		    			this.cmHistoricGraph(data, category);
+		    			this.loader = false;  
 		    		});
 				}
-				// var start_time = this.stringToDate($scope.hsf_value + " " + $scope.hsf_time_value),
-				// 	end_time = this.stringToDate($scope.hef_value + " " + $scope.hef_time_value);
-
-				// if(level == "no"){ start_time = ""; end_time = ""; }
-
-				// analytics.cmHistoricGraph(cm_id, type, start_time, end_time).then(cmHistoricGraph);
-				// $scope.loader = true;
 
 			}
+			else if(display == "cmts_days"){
+ 
+				var postdata = [];
 
-			// else if(display == "cmts_change"){
-			// 	// -- EDITED
+				this.getCMTSGraphData(this.cm_id, "us", type, postdata, 'span_change');
 
-			// 	$scope.selectedCMTSHistoricOption = "";
-			// 	var start_date = $scope.cmts_date_srange.split("/").join('-');
-			// 	var end_date = $scope.cmts_date_erange.split("/").join('-');
+				var typex = type == "1" ? "1" : type == "7" ? "w" : type == "31" ? "m" : "3" ;
 
-			// 	var start_time = start_date + " " + $scope.cmts_time_srange,
-			// 		end_time = end_date + " " + $scope.cmts_time_erange;
+    			const upstream_body = {postData:[]}
+ 		
+	    		this.http.post<any>('http://182.18.194.188/nms/authbasic/upstream/'+this.cm_id+'.'+type, upstream_body).subscribe(data => {
+	    			this.upstream = data.stream_data;
+	    		});
 
-			// 	var postdata = {
-			// 		"start_time" : start_time,
-			// 		"end_time" : end_time
-			// 	}
+				const cpeChannels_body = {cm_id: this.cm_id, type: typex, start: "", end:"" };
 
-			// 	type = 0;
-
-			// 	analytics.cmtsUSGraph(cm_id, 'us', type, postdata).then(cmtsUSGraph);
-			// }
-
-			// else if(display == "cmts_days"){
-			// 	var postdata = [];
-			// 	analytics.cmtsUSGraph(cm_id, 'us', type, postdata).then(cmtsUSGraph);
-			// }
-
-			// else if(display == "cmts_ds_change"){
-
-			// 	$scope.selectedCMTSHistoricOption = "";
-			// 	var start_date = $scope.cmts_ds_date_srange.split("/").join('-');
-			// 	var end_date = $scope.cmts_ds_date_erange.split("/").join('-');
-
-			// 	var start_time = start_date + " " + $scope.cmts_ds_time_srange,
-			// 		end_time = end_date + " " + $scope.cmts_ds_time_erange;
-
-			// 	var postdata = {
-			// 		"start_time" : start_time,
-			// 		"end_time" : end_time
-			// 	}
-
-			// 	analytics.cmtsDSGraph(cm_id, 'ds', '', postdata).then(cmtsDSGraph);
-
-			// }
-
-			// else if(display == "cmts_ds_days"){
-			// 	var postdata = [];
-			// 	analytics.cmtsDSGraph(cm_id, 'ds', $scope.selectedCMTSHistoricOption).then(cmtsDSGraph);
-			// }
-
-			// else if(display == "cmts_usn_change"){
-			// 	$scope.selectedCMTSNHistoricOption = "";
-
-			// 	var start_date = $scope.cmts_usn_date_srange.split("/").join('-');
-			// 	var end_date = $scope.cmts_usn_date_erange.split("/").join('-');
-
-			// 	var start_time = start_date + " " + $scope.cmts_usn_time_srange,
-			// 		end_time = end_date + " " + $scope.cmts_usn_time_erange;
-
-			// 	var postdata = {
-			// 		"start_time" : start_time,
-			// 		"end_time" : end_time
-			// 	}
-
-			// 	analytics.cmtsNUSGraph(cm_id, '', postdata).then(cmtsNUSGraph);
-			// }
-			// else if(display == "cmts_n_days"){
-			// 	var postdata = [];
-
-			// 	analytics.cmtsNUSGraph(cm_id, $scope.selectedCMTSNHistoricOption).then(cmtsNUSGraph);
-			// }
-
-			// else if(display == "cmts_dsn_change"){
-
-			// 	$scope.selectedCMTSNHistoricOption = "";
+	    		this.http.post<any>('http://182.18.194.188/nms/authbasic/graph_data', cpeChannels_body).subscribe(data => {
+	    			this.cmHistoricGraph(data, category);
+	    			this.loader = false;  
+	    		});
+			}
+			else if(display == "cmts_n_days"){
 				
-			// 	var start_date = $scope.cmts_dsn_date_srange.split("/").join('-');
-			// 	var end_date = $scope.cmts_dsn_date_erange.split("/").join('-');
+				var typex = type == "d" ? "3" : type == "24h" ? "1" : type == "w" ? "7" : type == "m" ? "31" : "3" ;
+				var key = this.port_active;
+				var self = this;
+				new Promise<any>((res, rej) => {
+					// graph creation
+					self.getUSGraphData(typex, category);
+					res(true);
+				})
+				.then(res => {
+					setTimeout(()=>{    //<<<---    using ()=> syntax
+						// console.log('test');
+						self.upstreamView(category, key);
+				 	}, 1500); 
+				})
+				  .then(res => {  
+					setTimeout(()=>{    //<<<---    using ()=> syntax
+						  this.portRow(key, category);
+					      // self.loader = false;
+				 	}, 1500);
+				})
+				  .catch(error => {
+					console.log('ERROR:', error.message);
+					self.loader = false;
+				});
 
-			// 	var start_time = start_date + " " + $scope.cmts_dsn_time_srange,
-			// 		end_time = end_date + " " + $scope.cmts_dsn_time_erange;
-
-			// 	var postdata = {
-			// 		"start_time" : start_time,
-			// 		"end_time" : end_time
-			// 	}
-
-			// 	type = "list";
-
-			// 	analytics.cmtsNDSGraph(cm_id, 'list', '3', postdata).then(cmtsNDSGraph);
-
-			// 	analytics.cmtsNDSGraph(cm_id, 'summary', '3', postdata).then(function(data){
-					
-			// 		cmtsSummaryMaxAverage(0, data, data.length - 1);
-			// 		var valueAxes = [{ "id":"v1","maximum": 580 ,"guides": [{"value": 422.4,"lineAlpha": 2,"lineThickness" : 2,"lineColor" : "#FF9900", "above": true},{"value": 528,"lineAlpha": 2,"lineThickness" : 2,"lineColor" : "#FF0000", "above": true}] , "position": "left"}]; 
-					
-			// 		createGraph("cmts_downstream_summary", data, "mm", valueAxes, $scope.summary_neighbor, "date");
-				
-			// 	});
-
-			// }
-
-			// else if(display == "cmts_d_days"){
-
-
-			// 	analytics.cmtsNDSGraph(cm_id, 'list', $scope.selectedCMTSNHistoricOption).then(cmtsNDSGraph);
-
-			// 	analytics.cmtsNDSGraph(cm_id, 'summary', $scope.selectedCMTSNHistoricOption).then(function(data){
-			// 		cmtsSummaryMaxAverage(0, data, data.length - 1);
-			// 		var threshold_warning  = 422.4;
-			// 		var threshold_critical = 528;
-			// 		var max_view = 580;
-
-			// 		if(data){
-			// 			var checker = ((Object.keys(data[0]).length - 1) /2);
-
-			// 			// console.log("max_view checker :"+ checker);
-			// 			if(checker >= 24 && checker <= 31){
-			// 				threshold_warning = threshold_warning * 1.5;
-			// 				threshold_critical = threshold_critical * 1.5;
-			// 				max_view = max_view * 1.5;
-			// 			}
-			// 			else if(checker > 31){
-			// 				threshold_warning = threshold_warning * 2;
-			// 				threshold_critical = threshold_critical * 2;
-			// 				max_view = max_view * 2;
-			// 			}
-			// 		}
-			// 		var valueAxes = [{ "id":"v1","maximum": max_view ,"guides": [{"value": threshold_warning,"lineAlpha": 2,"lineThickness" : 2,"lineColor" : "#FF9900", "above": true},{"value": threshold_critical,"lineAlpha": 2,"lineThickness" : 2,"lineColor" : "#FF0000", "above": true}] , "position": "left"}]; 
-			// 		createGraph("cmts_downstream_summary", data, "mm", valueAxes, $scope.summary_neighbor, "date");
-			// 	});
-			// }
-
+ 
+			}
 			else if(this.cmhistoric_visible == false){
 
 				this.chart_hist = true;
@@ -361,19 +507,46 @@ export class AnalyticsComponent implements OnInit {
 				const cpeChannels_body = {cm_id: this.cm_id, type: type, start: "", end:"" };
 
 	    		this.http.post<any>('http://182.18.194.188/nms/authbasic/graph_data', cpeChannels_body).subscribe(data => {
-	    			this.cmHistoricGraph(data);  
+	    			this.cmHistoricGraph(data, category); 
+	    			this.loader = false; 
 	    		});
-
+	    		
 				// $("#cm_history").removeClass('in out');
 				// $scope.cmhistoric_visible = true;
 				// $scope.loader = true;
 			}
-			else{ this.cmhistoric_visible = false; }
+			else{ this.cmhistoric_visible = false; this.loader = false; }
 		}
 
 	}
 
-	cmHistoricGraph(data){
+	rxcurrent;
+	rxaverage;
+	rxmaximum;
+	txcurrent;
+	txaverage;
+	txmaximum;
+	snrcurrent;
+	snraverage;
+	snrmaximum;
+	snr_max_dev;
+	snr_min_dev;
+	rx_max_dev;
+	rx_min_dev;
+	tx_max_dev;
+	tx_min_dev;
+
+	feccocurrent;
+	feccoaverage;
+	feccomaximum;
+	fecuncocurrent;
+	fecuncoaverage;
+	fecuncomaximum;
+
+	drop_graph_start;
+	drop_graph_end;
+
+	cmHistoricGraph(data, category){
 
 		if(data.length > 0){
 			var average_duration = data.length - 1 , length = data.length - 1, c = data.length - 1, temp_snr = 0, temp_rx = 0, temp_tx = 0,
@@ -429,54 +602,61 @@ export class AnalyticsComponent implements OnInit {
 				prev_tx = data[counter].tx;
 			}
 
-			var rxcurrent = data[c].rx;
-			var rxaverage = (temp_rx / average_duration).toFixed(2);
-			var rxmaximum = max_rx;
-			var txcurrent = data[c].tx;
-			var txaverage = (temp_tx / average_duration).toFixed(2);
-			var txmaximum = max_tx;
-			var snrcurrent = data[c].snr;
-			var snraverage = (temp_snr / average_duration).toFixed(2);
-			var snrmaximum = max_snr;
+			this.rxcurrent = data[c].rx;
+			this.rxaverage = (temp_rx / average_duration).toFixed(2);
+			this.rxmaximum = max_rx;
+			this.txcurrent = data[c].tx;
+			this.txaverage = (temp_tx / average_duration).toFixed(2);
+			this.txmaximum = max_tx;
+			this.snrcurrent = data[c].snr;
+			this.snraverage = (temp_snr / average_duration).toFixed(2);
+			this.snrmaximum = max_snr;
 
 			snr_dev_count = (snr_dev_count > 0) ? snr_dev_count : undefined; 
 			rx_dev_count = (rx_dev_count > 0) ? rx_dev_count : undefined;
 			tx_dev_count = (tx_dev_count > 0) ? tx_dev_count : undefined;
 
-			var snr_max_dev = (snr_dev.length > 0) ? (Math.max.apply(Math, snr_dev)).toFixed(2) : "None";
-			var snr_min_dev = (snr_dev.length > 0) ? (Math.min.apply(Math, snr_dev)).toFixed(2) : "None";
-			var rx_max_dev = (rx_dev.length > 0) ? (Math.max.apply(Math, rx_dev)).toFixed(2) : "None";
-			var rx_min_dev = (rx_dev.length > 0) ? (Math.min.apply(Math, rx_dev)).toFixed(2) : "None";
-			var tx_max_dev = (tx_dev.length > 0) ? (Math.max.apply(Math, tx_dev)).toFixed(2) : "None";
-			var tx_min_dev = (tx_dev.length > 0) ? (Math.min.apply(Math, tx_dev)).toFixed(2) : "None";
+			this.snr_max_dev = (snr_dev.length > 0) ? (Math.max.apply(Math, snr_dev)).toFixed(2) : "None";
+			this.snr_min_dev = (snr_dev.length > 0) ? (Math.min.apply(Math, snr_dev)).toFixed(2) : "None";
+			this.rx_max_dev = (rx_dev.length > 0) ? (Math.max.apply(Math, rx_dev)).toFixed(2) : "None";
+			this.rx_min_dev = (rx_dev.length > 0) ? (Math.min.apply(Math, rx_dev)).toFixed(2) : "None";
+			this.tx_max_dev = (tx_dev.length > 0) ? (Math.max.apply(Math, tx_dev)).toFixed(2) : "None";
+			this.tx_min_dev = (tx_dev.length > 0) ? (Math.min.apply(Math, tx_dev)).toFixed(2) : "None";
 
-			var ping_current = data[c].ping;
-			var ping_average = (total_ping / average_duration).toFixed(2);
-			var ping_maximum = max_ping;
+			this.ping_current = data[c].ping;
+			this.ping_average = (total_ping / average_duration).toFixed(2);
+			this.ping_maximum = max_ping;
 			
 			var byte_divider = 1000000;
 
-			var dl_current =	this.formatBytes(data[c].uhsbDL * byte_divider);
-			var dl_average =	this.formatBytes((total_dl / average_duration) * byte_divider);
-			var dl_maximum =	this.formatBytes(max_dl * byte_divider);
-			var ul_current =	this.formatBytes(data[c].uhsbUL * byte_divider);
-			var ul_average =	this.formatBytes((total_ul / average_duration) * byte_divider);
-			var ul_maximum =	this.formatBytes(max_ul * byte_divider);
+			this.dl_current =	this.formatBytes(data[c].uhsbDL * byte_divider);
+			this.dl_average =	this.formatBytes((total_dl / average_duration) * byte_divider);
+			this.dl_maximum =	this.formatBytes(max_dl * byte_divider);
+			this.ul_current =	this.formatBytes(data[c].uhsbUL * byte_divider);
+			this.ul_average =	this.formatBytes((total_ul / average_duration) * byte_divider);
+			this.ul_maximum =	this.formatBytes(max_ul * byte_divider);
 
-			var total_in = this.formatBytes(total_dl * byte_divider);
-			var total_out = this.formatBytes(total_ul * byte_divider);
-	
-			this.historicValueAxes({"rf": "rf_chart", "freq" : "freq_chart", "bw" : "bw_chart"} , "historic", data);
-
-
+			this.total_in = this.formatBytes(total_dl * byte_divider);
+			this.total_out = this.formatBytes(total_ul * byte_divider);
+			
+			if (category == 'drop') {
+				this.historicValueAxes({"rf": "rf_chart", "bw" : "bw_chart"} , "historic", data);
+			} else if (category == 'core') {
+				this.historicValueAxes({"freq" : "freq_chart"} , "historic", data);
+			}
+			
+ 
 			if(data[0]){
 				this.hsf_value = moment(data[0].time).format('L');
 				this.hsf_time_value = moment(data[0].time).format('HH:mm');
+				this.drop_graph_start = this.reformatData(this.hsf_value + " " + this.hsf_time_value);
 			}
 
-			if(data[data.length - 1]){
+			if(data[data.length - 1]){ 
 				this.hef_value = moment(data[data.length - 1].time).format('L');
 				this.hef_time_value = moment(data[data.length - 1].time).format('HH:mm');
+				this.drop_graph_end = this.reformatData(this.hef_value + " " + this.hef_time_value);
+
 			}
 		}
 		else{
@@ -565,12 +745,14 @@ export class AnalyticsComponent implements OnInit {
 					  	 { "valueAxis": "v1", "lineThickness" : 1, "lineColor": "#1E71A7", "bullet": "square", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Signal to Noise", "balloonText": "SNR = [[value]]", "valueField": "snr", "fillAlphas": 0 }, 
 					 	 { "valueAxis": "v1", "lineThickness" : 1, "lineColor": "#0F0", "bullet": "diamond", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Transmit Power", "balloonText": "TX = [[value]]", "valueField": "tx", "fillAlphas": 0 }];
 		
-		var freq_graphs = [{ "valueAxis": "v1", "balloonFunction" : this.getModProfile1, "lineThickness" : 2, "lineColor": "#FCD202", "bullet": "round", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Upstream Bandwidth", "balloonText": "usBw = [[value]]", "valueField": "usBw", "fillAlphas": 0 }, 
+		var freq_graphs = [
+						 { "valueAxis": "v1", "balloonFunction" : this.getModProfile1, "lineThickness" : 2, "lineColor": "#FCD202", "bullet": "round", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Upstream Bandwidth", "balloonText": "usBw = [[value]]", "valueField": "usBw", "fillAlphas": 0 }, 
 						 { "valueAxis": "v1", "balloonFunction" : this.getModProfile2, "lineThickness" : 2, "lineColor": "#0ad5f3", "bullet": "round", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Downstream Bandwidth", "balloonText": "dsBw = [[value]]", "valueField": "dsBw", "fillAlphas": 0 }, 
 						 { "valueAxis": "v1", "lineThickness" : 2, "lineColor": "#0ad8f3", "bullet": "round", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Upstream Speed", "balloonText": "usSpeed = [[value]]", "valueField": "usSpeed", "fillAlphas": 0 }, 
 						 { "valueAxis": "v1", "lineThickness" : 2, "lineColor": "#FF0000", "bullet": "square", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Upstream Frequency", "balloonText": "usFreq = [[value]]", "valueField": "usFreq", "fillAlphas": 0 }, 
 						 { "valueAxis": "v1", "lineThickness" : 2, "lineColor": "#0FEB0E", "bullet": "square", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Downstream Frequency", "balloonText": "dsFreq = [[value]]", "valueField": "dsFreq", "fillAlphas": 0 },
-						 { "valueAxis": "v2", "balloonFunction" : this.getModProfile3, "lineThickness" : 2, "lineColor": "#4B0082", "bullet": "rount", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Modulation", "balloonText": "mod = [[value]]", "valueField": "mod", "fillAlphas": 0 }];
+						 { "valueAxis": "v2", "balloonFunction" : this.getModProfile3, "lineThickness" : 2, "lineColor": "#4B0082", "bullet": "rount", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Modulation", "balloonText": "mod = [[value]]", "valueField": "mod", "fillAlphas": 0 }
+						 ];
 			
 		var bw_graphs = [{ "valueAxis": "v2", "lineThickness" : 2, "lineColor": "#FF6600", "hidden": "true", "bullet": "round", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Ping", "balloonText": "Ping = [[value]] ms", "valueField": "ping", "fillAlphas": 0}, 
 						 { "valueAxis": "v1", "balloonFunction" : this.formatBalloonTraffic, "lineThickness" : 2, "lineColor": "#00CF00", "type": "step" , "bullet": "diamond", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Download", "balloonText": "Download = [[value]]", "valueField": "uhsbDL", "fillAlphas": 0.9, "fillColors": "#00CF00"}, 
@@ -614,9 +796,28 @@ export class AnalyticsComponent implements OnInit {
 	byte_divider = 1000000;
 	live_state;
 
-	createGraph(chart, data, period, valueAxes, graphs, catField){
+	snr_dev_count;
+	rx_dev_count;
+	tx_dev_count;
 
-		
+	ping_average;
+	ping_maximum;
+	ping_current;
+	dl_average;
+	dl_maximum;
+	ul_average;
+	ul_maximum;
+	dl_current;
+	ul_current;
+	total_in;
+	total_out;
+
+	plant_graph_start;
+	plant_graph_end;
+
+	createGraph(chart, data, period, valueAxes, graphs, catField){
+		// console.log(chart);
+		// this.loader = true;
 		this.charts[chart] =  AmCharts.makeChart(chart, 
 			jquery.extend(true, {}, {
 			    "type": "serial",
@@ -683,18 +884,18 @@ export class AnalyticsComponent implements OnInit {
 
 								if(check == 1){
 									// create a new guide
-									var guide = new AmCharts.Guide();
-									guide.date = date;
-									guide.lineAlpha = 1;
-									guide.lineColor = "#c44";
-									guide.label = text;
-									guide.balloonText = "testing",
-									guide.above = true;
-									guide.position = "top";
-									guide.inside = true;
-									guide.labelRotation = 90;
-									e.chart.categoryAxis.addGuide( guide );
-									e.chart.validateData();
+									// var guide = new AmCharts.Guide();
+									// guide.date = date;
+									// guide.lineAlpha = 1;
+									// guide.lineColor = "#c44";
+									// guide.label = text;
+									// guide.balloonText = "testing",
+									// guide.above = true;
+									// guide.position = "top";
+									// guide.inside = true;
+									// guide.labelRotation = 90;
+									// e.chart.categoryAxis.addGuide( guide );
+									// e.chart.validateData();
 								}
 							}
 				    	})
@@ -729,17 +930,19 @@ export class AnalyticsComponent implements OnInit {
 			this.activecmts["" + i] = i + ".traffic";
 		}
 
-
+		// this.loader = false;
 
 		this.charts[chart].addListener("zoomed", handleZoom);
-	
-		function handleZoom(event){
-
+		
+		var self = this;
+		function handleZoom(event){ 
 			if(chart == "rf_chart" || chart == "bw_chart"){
-				this.hsf_value = moment(event.startDate).format('L'); 
-				this.hsf_time_value = moment(event.startDate).format('HH:mm');
-				this.hef_value = moment(event.endDate).format('L');
-				this.hef_time_value = moment(event.endDate).format('HH:mm');
+				self.hsf_value = moment(event.startDate).format('L'); 
+				self.hsf_time_value = moment(event.startDate).format('HH:mm');
+				self.hef_value = moment(event.endDate).format('L');
+				self.hef_time_value = moment(event.endDate).format('HH:mm');
+				self.drop_graph_start = self.reformatData(self.hsf_value + " " + self.hsf_time_value);
+				self.drop_graph_end = self.reformatData(self.hef_value + " " + self.hef_time_value);
 			}
 
 			if(chart == "cmts_dschart"){
@@ -750,10 +953,12 @@ export class AnalyticsComponent implements OnInit {
 			}
 
 			if(chart == "cmts_uschart_count" || chart == "cmts_uschart_snr" || chart == "cmts_uschart_fec" || chart == "cmts_uschart_traffic"){
-				this.cmts_date_srange = moment(event.startDate).format('L'); 
-				this.cmts_time_srange = moment(event.startDate).format('HH:mm');
-				this.cmts_date_erange = moment(event.endDate).format('L');
-				this.cmts_time_erange = moment(event.endtDate).format('HH:mm');
+				self.cmts_date_srange = moment(event.startDate).format('L'); 
+				self.cmts_time_srange = moment(event.startDate).format('HH:mm');
+				self.cmts_date_erange = moment(event.endDate).format('L');
+				self.cmts_time_erange = moment(event.endtDate).format('HH:mm');
+				// self.drop_graph_start = self.reformatData(self.cmts_date_srange + " " + self.cmts_time_srange);
+				// self.drop_graph_end = self.reformatData(self.cmts_date_erange + " " + self.cmts_time_erange);
 			}
 
 			if(chart.match(/neighbor_chart.*/) || chart.match(/neighbor_tchart.*/)){
@@ -764,10 +969,15 @@ export class AnalyticsComponent implements OnInit {
 			}
 
 			if(chart.match(/usn_chart.*/)){
-				this.cmts_usn_date_srange = moment(event.startDate).format('L');
-				this.cmts_usn_time_srange = moment(event.startDate).format('HH:mm');
-				this.cmts_usn_date_erange = moment(event.endDate).format('L');
-				this.cmts_usn_time_erange = moment(event.endDate).format('HH:mm');
+				self.cmts_usn_date_srange = moment(event.startDate).format('L');
+				self.cmts_usn_time_srange = moment(event.startDate).format('HH:mm');
+				self.cmts_usn_date_erange = moment(event.endDate).format('L');
+				self.cmts_usn_time_erange = moment(event.endDate).format('HH:mm');
+ 
+				self.plant_graph_start = self.reformatData(self.cmts_usn_date_srange + " " + self.cmts_usn_time_srange);
+				self.plant_graph_end = self.reformatData(self.cmts_usn_date_erange + " " + self.cmts_usn_time_erange);
+				self.charts["usn_chart"+self.port_active].zoomToDates(event.startDate, event.endDate);
+				self.charts["usn_chart"+self.port_active+"snr"].zoomToDates(event.startDate, event.endDate);
 			}
 
 			if(chart.match(/dsn_chart.*/) || chart == "cmts_downstream_summary"){
@@ -780,7 +990,7 @@ export class AnalyticsComponent implements OnInit {
 			if(chart == "cmts_uschart_count"){ this.cmtsMaxAverage(event.startIndex, event.endIndex, data, 'count', "", event.startDate, event.endDate); }
 			else if(chart == "cmts_uschart_snr"){ this.cmtsMaxAverage(event.startIndex, event.endIndex, data, 'snr', "", event.startDate, event.endDate); }	
 			else if(chart == "cmts_uschart_fec"){ this.cmtsMaxAverage(event.startIndex, event.endIndex, data, 'fec', "", event.startDate, event.endDate); }
-			else if(chart == "cmts_uschart_traffic"){ this.cmtsMaxAverage(event.startIndex, event.endIndex, data, 'traffic', "", event.startDate, event.endDate); }
+			else if(chart == "cmts_uschart_traffic"){ self.cmtsMaxAverage(event.startIndex, event.endIndex, data, 'traffic', "", event.startDate, event.endDate); }
 			else if(chart == "rf_chart"){ cableMaxAverage(event.startIndex, event.endIndex, data, 'rf', event.startDate, event.endDate) }
 			else if(chart == "freq_chart"){ }//adjustableBandwidthChart(event.startIndex, event.endIndex, data, 'bw', event.startDate, event.endDate) }
 			else if(chart == "bw_chart"){ adjustableBandwidthChart(event.startIndex, event.endIndex, data, 'bw', event.startDate, event.endDate) }
@@ -792,7 +1002,7 @@ export class AnalyticsComponent implements OnInit {
 			else if(chart == "cmts_dschart"){ this.cmtsDownMaxAverage(event.startIndex, event.endIndex, data, 'downstream'); }
 			else if (chart.match(/dsn_chart.*/)) { this.cmtsDownMaxAverage(event.startIndex, event.endIndex, data, 'ndownstream', this.test); }
 			else if(chart == "cmts_downstream_summary"){ this.cmtsSummaryMaxAverage(event.startIndex, data, event.endIndex) }
-			else{ this.cmtsMaxAverage(event.startIndex, event.endIndex, data, 'nupstream', this.test, event.startDate, event.endDate); }
+			else{ self.cmtsMaxAverage(event.startIndex, event.endIndex, data, 'nupstream', null, event.startDate, event.endDate); }
 			
 		}
 
@@ -867,26 +1077,26 @@ export class AnalyticsComponent implements OnInit {
 					prev_tx = data[i].tx;
 				}
 
-				this.$apply(function(){
-					this.rxaverage = (total_rx / length).toFixed(2);
-					this.rxmaximum = max_rx;
-					this.txaverage = (total_tx / length).toFixed(2);
-					this.txmaximum = max_tx;
-					this.snraverage = (total_snr / length).toFixed(2); 
-					this.snrmaximum = max_snr;
+				// this.$apply(function(){
+					self.rxaverage = (total_rx / length).toFixed(2);
+					self.rxmaximum = max_rx;
+					self.txaverage = (total_tx / length).toFixed(2);
+					self.txmaximum = max_tx;
+					self.snraverage = (total_snr / length).toFixed(2); 
+					self.snrmaximum = max_snr;
 
-					this.snr_dev_count = (snr_dev_count > 0) ? snr_dev_count : "None"; 
-					this.rx_dev_count = (rx_dev_count > 0) ? rx_dev_count : "None";
-					this.tx_dev_count = (tx_dev_count > 0) ? tx_dev_count : "None";
-					this.snr_max_dev = (snr_dev.length > 0) ? (Math.max.apply(Math, snr_dev)).toFixed(2) : "None";
-					this.snr_min_dev = (snr_dev.length > 0) ? (Math.min.apply(Math, snr_dev)).toFixed(2) : "None";
-					this.rx_max_dev = (rx_dev.length > 0) ? (Math.max.apply(Math, rx_dev)).toFixed(2) : "None";
-					this.rx_min_dev = (rx_dev.length > 0) ? (Math.min.apply(Math, rx_dev)).toFixed(2) : "None";
-					this.tx_max_dev = (tx_dev.length > 0) ? (Math.max.apply(Math, tx_dev)).toFixed(2) : "None";
-					this.tx_min_dev = (tx_dev.length > 0) ? (Math.min.apply(Math, tx_dev)).toFixed(2) : "None";
-				});
+					self.snr_dev_count = (snr_dev_count > 0) ? snr_dev_count : "None"; 
+					self.rx_dev_count = (rx_dev_count > 0) ? rx_dev_count : "None";
+					self.tx_dev_count = (tx_dev_count > 0) ? tx_dev_count : "None";
+					self.snr_max_dev = (snr_dev.length > 0) ? (Math.max.apply(Math, snr_dev)).toFixed(2) : "None";
+					self.snr_min_dev = (snr_dev.length > 0) ? (Math.min.apply(Math, snr_dev)).toFixed(2) : "None";
+					self.rx_max_dev = (rx_dev.length > 0) ? (Math.max.apply(Math, rx_dev)).toFixed(2) : "None";
+					self.rx_min_dev = (rx_dev.length > 0) ? (Math.min.apply(Math, rx_dev)).toFixed(2) : "None";
+					self.tx_max_dev = (tx_dev.length > 0) ? (Math.max.apply(Math, tx_dev)).toFixed(2) : "None";
+					self.tx_min_dev = (tx_dev.length > 0) ? (Math.min.apply(Math, tx_dev)).toFixed(2) : "None";
+				// });
 
-				this.charts["bw_chart"].zoomToDates(s_date, e_date);
+				self.charts["bw_chart"].zoomToDates(s_date, e_date);
 			}
 			else if(stream == "live"){
 
@@ -1018,6 +1228,7 @@ export class AnalyticsComponent implements OnInit {
 
 		}
 
+		var self = this;
 		function adjustableBandwidthChart(start, end, data, stream, s_date, e_date){
 			var total_ping = 0, total_dl = 0, total_ul = 0, max_ping = 0, max_dl = 0, max_ul = 0 , length = end - start;
 
@@ -1035,21 +1246,21 @@ export class AnalyticsComponent implements OnInit {
 					length++;
 				}
 
-				this.$apply(function(){
+				// this.$apply(function(){
 
-					this.ping_average =  (total_ping / length).toFixed(2);
-					this.ping_maximum = max_ping;
-					this.dl_average =	this.formatBytes((total_dl / length) * this.byte_divider);
-					this.dl_maximum =	this.formatBytes(max_dl * this.byte_divider);
-					this.ul_average =	this.formatBytes((total_ul / length) * this.byte_divider);
-					this.ul_maximum =	this.formatBytes(max_ul * this.byte_divider);
+					self.ping_average =  (total_ping / length).toFixed(2);
+					self.ping_maximum = max_ping;
+					self.dl_average =	self.formatBytes((total_dl / length) * self.byte_divider);
+					self.dl_maximum =	self.formatBytes(max_dl * self.byte_divider);
+					self.ul_average =	self.formatBytes((total_ul / length) * self.byte_divider);
+					self.ul_maximum =	self.formatBytes(max_ul * self.byte_divider);
 
-					this.total_in = this.formatBytes(total_dl * this.byte_divider);
-					this.total_out = this.formatBytes(total_ul * this.byte_divider);
+					self.total_in = self.formatBytes(total_dl * self.byte_divider);
+					self.total_out = self.formatBytes(total_ul * self.byte_divider);
 
-				});
+				// });
 
-				this.charts["rf_chart"].zoomToDates(s_date, e_date);
+				self.charts["rf_chart"].zoomToDates(s_date, e_date);
 			}
 			else if(stream == "live"){
 
@@ -1083,10 +1294,97 @@ export class AnalyticsComponent implements OnInit {
 
 
  
-		this.loader = false;
+		// this.loader = false;
 
 		return this.charts[chart];
 	}
+
+	onlineaverage;
+	offlineaverage;
+	onlinemaximum;
+	offlinemaximum;
+	traaverage;
+	tramaximum;
+	tracurrent;
+
+	cmtsMaxAverage(start, end, data, stream, key, s_date, e_date){
+		var self = this;
+		var temp_online = 0,temp_offline = 0,temp_snr = 0,temp_feccor = 0,temp_fecuncor = 0,temp_traffic = 0,length = end - start, max_online = 0,
+		 max_offline = 0,max_snr = 0,max_feccor = 0,max_fecuncor = 0,max_traffic = 0;
+
+		for(var i = start; i <= end; i++){
+			
+			if(max_online < data[i].online){ max_online =  data[i].online }
+			if(max_offline < data[i].offline){ max_offline =  data[i].offline }
+			if(max_snr < data[i].snr){ max_snr =  data[i].snr }
+			if(max_feccor < data[i].fec_correctables) { max_feccor =  data[i].fec_correctables }
+			if(max_fecuncor < data[i].fec_uncorrectables){ max_fecuncor =  data[i].fec_uncorrectables }
+			if(max_traffic < data[i].traffic){ max_traffic =  data[i].traffic }
+
+			temp_online += (data[i].online != null) ? parseFloat(data[i].online) : 0;
+			temp_offline += (data[i].offline != null) ? parseFloat(data[i].offline) : 0;
+			temp_snr += (data[i].snr != null) ? parseFloat(data[i].snr) : 0;
+			temp_feccor += (data[i].fec_correctables != null) ? parseFloat(data[i].fec_correctables) : 0;
+			temp_fecuncor += (data[i].fec_uncorrectables != null) ? parseFloat(data[i].fec_uncorrectables) : 0;
+			temp_traffic += (data[i].traffic != null) ? parseFloat(data[i].traffic) : 0;
+		
+		}
+
+		if(stream == 'nupstream'){
+			var self = this;
+			this.us_ports.forEach(function(value, keyval) {
+		       	if(value.name == self.port_active){
+		       		// $timeout(function(){
+		       			self.onlineaverage = (temp_online / length).toFixed(0);
+						self.offlineaverage = (temp_offline / length).toFixed(0);
+						self.snraverage = (temp_snr / length).toFixed(0);
+						self.feccoaverage = (temp_feccor / length).toFixed(4);
+						self.fecuncoaverage = (temp_fecuncor / length).toFixed(4);
+						self.traaverage = (temp_traffic / length).toFixed(2);
+						self.snrmaximum = max_snr;
+						self.onlinemaximum = max_online;
+						self.offlinemaximum = max_offline;
+						self.feccomaximum = max_feccor;
+						self.fecuncomaximum = max_fecuncor;
+						self.tramaximum = max_traffic;
+	       			// });
+		       	}
+         	});
+		}else if(stream == 'traffic'){
+			// self.$apply(function(){
+				self.traaverage = (temp_traffic / length).toFixed(2);
+				self.tramaximum = max_traffic;
+			// });
+		}else if(stream == 'snr'){
+			// self.$apply(function(){
+				self.snraverage = (temp_snr / length).toFixed(0);
+				self.snrmaximum = max_snr;
+			// });
+		}else if(stream == 'fec'){
+			// self.$apply(function(){
+				self.feccoaverage = (temp_feccor / length).toFixed(4);
+				self.feccomaximum = max_feccor;
+				self.fecuncoaverage = (temp_fecuncor / length).toFixed(4);
+				self.fecuncomaximum = max_fecuncor;
+			// });
+		}else if(stream == 'count'){
+			// self.$apply(function(){
+				self.onlineaverage = (temp_online / length ).toFixed(0);
+				self.onlinemaximum = (temp_offline / length ).toFixed(0);
+				self.onlinemaximum = max_online;
+				self.offlinemaximum = max_offline;
+			// });
+		}
+
+		if(stream != "nupstream"){
+			self.charts["usn_chart"+self.port_active+"traffic"].zoomToDates(s_date, e_date);
+			// self.charts["cmts_uschart_snr"].zoomToDates(s_date, e_date);
+			// self.charts["cmts_uschart_fec"].zoomToDates(s_date, e_date);
+			// self.charts["cmts_uschart_traffic"].zoomToDates(s_date, e_date);
+		}
+		
+	}
+
 
 	cmts_date_srange;
 	cmts_time_srange;
@@ -1120,7 +1418,13 @@ export class AnalyticsComponent implements OnInit {
 	gs_time_value;
 	ge_date_value;
 	ge_time_value;
- 
+ 	
+ 	reformatData(time){
+		var date = moment(time).format("MMMM DD, YYYY HH:mm");
+
+		if(date){ return date; }
+		else { return date; }
+	}
 
 	zoomToDates(type){
 		
@@ -1322,4 +1626,929 @@ export class AnalyticsComponent implements OnInit {
 			this.historicValueAxes({"rf": "rf_live", "freq" : "freq_live", "bw" : "bw_live"} , "live", data);
 		}
 	}
+
+	// plant graph
+	threshold;
+	upstreamNeighbor;
+	snr;
+	cor;
+	unc;
+	tra;
+
+
+	cmtsNUSGraph(upstream, category){ 
+		// this.loader = true;
+		this.http.get<any>('http://182.18.194.188/nms/authbasic/api/threshold').subscribe(data => {
+			this.threshold = data;
+			// this.loader = false;		
+
+			if(this.upstream_raw.status == "failed"){
+				setTimeout(function(){
+					this.us_ports = [];
+				})
+				// this.loader = false;
+				// toaster.pop('error', "Error", this.upstream_raw.message);
+			}else{
+
+				var date_count = parseInt(this.threshold.days.days),
+					day_threshold = (12 * 24) * date_count,			
+					values = {},
+					selectOptions = [],
+					snrresultaverage = "",
+					corresultaverage = "",
+					uncorresultaverage = "",
+					traresultaverage = "",
+					corsummaryresultaverage = "";
+
+				this.upstreamNeighbor = (upstream.neigborresult) ? upstream.neigborresult : "";
+				var self = this;
+				// console.log(upstream.stream_data);
+				// console.log(Object.values(upstream.stream_data));
+		 		var threshold = this.threshold;
+				Object.values(upstream.stream_data).forEach(function(value, key) {
+
+					// upstream.stream_data[key]["name"] = key;
+
+					var length = value['us_data'].length - 1, 
+						temp_snr = 0, 
+						max_snr = 0,
+						temp_online = 0, 
+						temp_offline = 0, 
+						max_online = 0, 
+						max_offline = 0, 
+						temp_cor = 0, 
+						temp_unc = 0, 
+						max_unc = 0,
+						max_cur = 0, 
+						max_tra = 0, 
+						temp_tra = 0,
+						traffic_counter = 0,
+        				consistent_traffic = false,
+        				persistent_uncor = false,
+        				persistent_uncor_counter = 0,
+						uncor_value = threshold.uncor.value / 100,
+    				 	persistent_percentage = length * uncor_value,
+			 			start = length - day_threshold;
+
+					if(start < 0){
+						var start = 0;
+					}
+
+					var average_counter = 0,
+				 		snr = 0,cor = 0,unc =0 , tra = 0;
+					
+					for(var counter = 0; counter <= length; counter++){
+
+						if(counter >= start){
+							
+							if(value['us_data'][counter].fec_uncorrectables > 1){
+								persistent_uncor_counter++;
+								if(persistent_uncor_counter > persistent_percentage){
+									persistent_uncor = true;
+								}
+							}
+
+							average_counter++;
+
+							if(value['us_data'][counter].traffic > value['us_data'][counter].traffic_warning){
+	                            traffic_counter++;
+	                            if(traffic_counter == 24){
+	                                consistent_traffic = true;
+	                            }
+	                        }else{
+	                            traffic_counter = 0;
+	                        }
+	                        
+							var cursnr = parseFloat(value['us_data'][counter].snr),
+								curonline = parseFloat(value['us_data'][counter].online),
+								curoffline = parseFloat(value['us_data'][counter].offline),
+								curcor = parseFloat(value['us_data'][counter].fec_correctables),
+								curunc = parseFloat(value['us_data'][counter].fec_uncorrectables),
+								curtra = parseFloat(value['us_data'][counter].traffic);
+
+							temp_snr += cursnr;
+							temp_online += curonline;
+							temp_offline += curoffline;
+
+							temp_cor += curcor;
+							temp_unc += curunc;
+							temp_tra += curtra; 
+
+							if(cursnr > max_snr){max_snr = cursnr;}
+							if(curonline > max_online){max_online = curonline;}
+							if(curoffline > max_offline){max_offline = curoffline;}
+
+							if(curcor > max_cur){max_cur = curcor;}
+							if(curunc > max_unc){max_unc = curunc;}
+							if(curtra > max_tra){max_tra = curtra;}
+						}
+					}
+
+					if(value['us_data'].length > 0){
+
+						self.snr = (temp_snr > 0) ? (temp_snr / average_counter).toFixed(2) : 0;
+						self.cor = (temp_cor > 0) ? (temp_cor / average_counter).toFixed(2) : 0;
+						self.unc = (temp_unc > 0) ? (temp_unc / average_counter).toFixed(2) : 0;
+						self.tra = (temp_unc > 0) ? (temp_tra / average_counter).toFixed(2) : 0;
+
+						if(self.snr > threshold.info.SNR.Alarming.max){snrresultaverage = "good";}
+						else if(self.snr >= threshold.info.SNR.Alarming.min && self.snr <= threshold.info.SNR.Alarming.max){snrresultaverage = "alarming";}
+						else if(self.snr < threshold.info.SNR.Critical.max){snrresultaverage = "critical";}
+						if(self.snr === "0.00"){ snrresultaverage = ""; }
+
+						// cor
+						var cor_alert_min = parseInt(threshold.info.Correctable.Alarming.min);
+						var cor_alert_max = parseInt(threshold.info.Correctable.Alarming.max);
+						var cor_critical_min = parseInt(threshold.info.Correctable.Critical.min);
+						var unc_alert_max = parseInt(threshold.info.Uncorrectable.Critical.min);
+						
+						if(cor > cor_alert_min && cor < cor_alert_max && unc < unc_alert_max){corresultaverage = "alarming";}
+						else if(cor > cor_critical_min || unc > unc_alert_max){ corresultaverage = "critical"; }
+			            else{corresultaverage = 'good';}
+
+			        	if(unc > unc_alert_max){ uncorresultaverage = 'critcal';
+			      		}else{ uncorresultaverage = 'good'; }
+
+			      		if(cor > cor_alert_min && cor < cor_alert_max){corsummaryresultaverage = "alarming";}
+			      		else if(cor > cor_critical_min){ corsummaryresultaverage = "critical"; }
+			            else{corsummaryresultaverage = 'good';}
+
+
+						if(corresultaverage == "good"){
+							if(persistent_uncor){
+								corresultaverage = 'alarming';
+							}
+						}
+
+						if(uncorresultaverage == 'good'){
+							if(persistent_uncor){
+								corresultaverage = 'alarming';
+								uncorresultaverage = 'alarming';
+							}
+						}
+
+						// traffic
+						if(tra > value['us_data'][length].traffic_alert){ traresultaverage = "critical"; }
+						else if( (tra >= value['us_data'][length].traffic_warning && tra <= value['us_data'][length].traffic_alert) || consistent_traffic ){ traresultaverage = "alarming"; }
+						else if(tra < value['us_data'][length].traffic_warning){ traresultaverage = "good"; }
+
+						if(self.tra === "0.00"){ 
+							traresultaverage = "";
+						}
+
+						Object.values(upstream.stream_data)[key]['snrcurrent'] = value['us_data'][length].snr;
+						Object.values(upstream.stream_data)[key]['snraverage'] = temp_snr / average_counter;
+						Object.values(upstream.stream_data)[key]['snrmaximum'] = max_snr;
+
+						Object.values(upstream.stream_data)[key]['onlinecurrent'] = value['us_data'][length].online;
+						Object.values(upstream.stream_data)[key]['onlineaverage'] = Math.round(temp_online / average_counter);
+						Object.values(upstream.stream_data)[key]['onlinemaximum'] = max_online;
+
+						Object.values(upstream.stream_data)[key]['offlinecurrent'] = value['us_data'][length].offline;
+						Object.values(upstream.stream_data)[key]['offlineaverage'] = Math.round(temp_offline / average_counter);
+						Object.values(upstream.stream_data)[key]['offlinemaximum'] = max_offline;
+
+						Object.values(upstream.stream_data)[key]['feccocurrent'] = value['us_data'][length].fec_correctables;
+						Object.values(upstream.stream_data)[key]['feccoaverage'] =  (temp_cor / average_counter).toFixed(4);
+						Object.values(upstream.stream_data)[key]['feccomaximum'] = max_cur;
+
+						Object.values(upstream.stream_data)[key]['fecuncocurrent'] = value['us_data'][length].fec_uncorrectables;
+						Object.values(upstream.stream_data)[key]['fecuncoaverage'] =  (temp_unc  / average_counter).toFixed(4);
+						Object.values(upstream.stream_data)[key]['fecuncomaximum'] = max_unc;
+
+						Object.values(upstream.stream_data)[key]['tracurrent'] = value['us_data'][length]['traffic']
+						Object.values(upstream.stream_data)[key]['traaverage'] = ( temp_tra / average_counter).toFixed(4)
+						Object.values(upstream.stream_data)[key]['tramaximum'] = max_tra;
+					
+					}else{
+						Object.values(upstream.stream_data)[key]['snrcurrent'] = 0;
+						Object.values(upstream.stream_data)[key]['snraverage'] = 0;
+						Object.values(upstream.stream_data)[key]['snrmaximum'] = 0;
+						Object.values(upstream.stream_data)[key]['onlinecurrent'] = 0;
+						Object.values(upstream.stream_data)[key]['onlineaverage'] = 0;
+						Object.values(upstream.stream_data)[key]['onlinemaximum'] = 0;
+						Object.values(upstream.stream_data)[key]['offlinecurrent'] = 0;
+						Object.values(upstream.stream_data)[key]['offlineaverage'] = 0;
+						Object.values(upstream.stream_data)[key]['offlinemaximum'] = 0;
+						Object.values(upstream.stream_data)[key]['feccocurrent'] = 0;
+						Object.values(upstream.stream_data)[key]['feccoaverage'] = 0;
+						Object.values(upstream.stream_data)[key]['feccomaximum'] = 0;
+						Object.values(upstream.stream_data)[key]['fecuncocurrent'] = 0;
+						Object.values(upstream.stream_data)[key]['fecuncoaverage'] = 0;
+						Object.values(upstream.stream_data)[key]['fecuncomaximum'] = 0;
+						Object.values(upstream.stream_data)[key]['tracurrent'] = 0;
+						Object.values(upstream.stream_data)[key]['traaverage'] = 0;
+						Object.values(upstream.stream_data)[key]['tramaximum'] = 0;
+
+						corresultaverage= "good";
+					}
+
+					selectOptions.push({
+				        name: key, 
+				        data : value['us_data'],
+				        nodes : value['nodes'],
+				        snrresultstatus : snr,
+				        snrresultaverage : snrresultaverage,
+				        corresultstatus : cor,
+				        corresultaverage : corresultaverage,
+				        corsummaryresultaverage : corsummaryresultaverage,
+				        uncorresultaverage : uncorresultaverage,
+				        uncorresulstatus : unc,
+				        traresulstatus : tra,
+				        traresultaverage : traresultaverage,
+				        snrcurrent : Object.values(upstream.stream_data)[key]['snrcurrent'],
+						snraverage : (Object.values(upstream.stream_data)[key]['snraverage']).toFixed(2), 
+						snrmaximum : Object.values(upstream.stream_data)[key]['snrmaximum'], 
+						onlinecurrent : Object.values(upstream.stream_data)[key]['onlinecurrent'], 
+						onlineaverage : Object.values(upstream.stream_data)[key]['onlineaverage'], 
+						onlinemaximum : Object.values(upstream.stream_data)[key]['onlinemaximum'], 
+						offlinecurrent : Object.values(upstream.stream_data)[key]['offlinecurrent'], 
+						offlineaverage : Object.values(upstream.stream_data)[key]['offlineaverage'], 
+						offlinemaximum : Object.values(upstream.stream_data)[key]['offlinemaximum'], 
+						feccocurrent : Object.values(upstream.stream_data)[key]['feccocurrent'], 
+						feccoaverage : Object.values(upstream.stream_data)[key]['feccoaverage'], 
+						feccomaximum : Object.values(upstream.stream_data)[key]['feccomaximum'], 
+						fecuncocurrent : Object.values(upstream.stream_data)[key]['fecuncocurrent'], 
+						fecuncoaverage : Object.values(upstream.stream_data)[key]['fecuncoaverage'], 
+						fecuncomaximum : Object.values(upstream.stream_data)[key]['fecuncomaximum'], 
+						tracurrent : Object.values(upstream.stream_data)[key]['tracurrent'], 
+						traaverage : Object.values(upstream.stream_data)[key]['traaverage'], 
+						tramaximum : Object.values(upstream.stream_data)[key]['tramaximum'], 
+						tfeccoaverage : Object.values(upstream.stream_data)[key]['feccoaverage'], 
+						tfecuncoaverage : Object.values(upstream.stream_data)[key]['fecuncoaverage'], 
+						tsnraverage : (Object.values(upstream.stream_data)[key]['snraverage']).toFixed(2)
+				    });
+				});
+				
+				this.us_ports = selectOptions;
+				// set fec values summary
+				this.feccocurrent = selectOptions[this.port_active]['feccocurrent'];
+				this.feccoaverage = selectOptions[this.port_active]['feccoaverage'];
+				this.feccomaximum = selectOptions[this.port_active]['feccomaximum'];
+
+				this.fecuncocurrent = selectOptions[this.port_active]['fecuncocurrent'];
+				this.fecuncoaverage = selectOptions[this.port_active]['fecuncoaverage'];
+				this.fecuncomaximum = selectOptions[this.port_active]['fecuncomaximum'];
+
+				this.tracurrent = selectOptions[this.port_active]['tracurrent'];
+				this.traaverage = selectOptions[this.port_active]['traaverage'];
+				this.tramaximum = selectOptions[this.port_active]['tramaximum'];
+				
+				setTimeout(function(){
+					var ctr = 0;
+					Object.values(upstream.stream_data).forEach(function(value, key) {
+
+						var len = value['us_data'].length - 1;	
+
+						var alert_threshold = 0;
+						var warning_threshold = 0;
+
+						if(value['us_data'].length > 0){
+							alert_threshold = value['us_data'][len]['traffic_alert'];
+							warning_threshold = value['us_data'][len]['traffic_warning'];
+						}
+
+						var valueAxes = [{ "id":"v1", "maximum": alert_threshold , "bullet" : "square","position": "left"}, 
+								 { "id":"v2","minimum": 0, "guides": [{"value": 25,"lineAlpha": 2,"lineThickness" : 2,"lineColor" : "#44F", "above": true},{"value": 20,"lineAlpha": 1,"lineThickness" : 1,"lineColor" : "#F51D30", "above": true}], "bullet" : "square", "axisColor": "#FE8919", "position": "left"}, 
+								 { "id":"v3", "maximum": 6, "guides": [{"value": 0.5,"lineAlpha": 1,"lineThickness" : 1,"lineColor" : "#F51D30", "above": true},{"value": 2.5,"lineAlpha": 1,"lineThickness" : 1,"lineColor" : "#157419", "above": true}], "bullet" : "square", "axisColor": "#000", "position": "left", "axisAlpha": 2},
+								 { "id":"v4", "bullet" : "square","position": "left" }];
+				
+
+
+						var graphs = [{ "valueAxis": "v4", "lineThickness" : 1.5, "lineColor": "#0F0", "bullet": "round", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Online", "balloonText": "Online = [[value]]", "valueField": "online", "fillAlphas": 0, "hidden" : true}, 
+								  { "valueAxis": "v4", "lineThickness" : 1.5, "lineColor": "#F00", "bullet": "round", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Offline", "balloonText": "Offline = [[value]]", "valueField": "offline", "fillAlphas": 0 , "hidden" : true}, 
+								  { "valueAxis": "v2", "lineColor": "#FF7D00", "fillColors": "#FF7D00", "fillAlphas": 0.9, "bullet": "square", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "SNR", "balloonText": "SNR = [[value]]", "valueField": "snr", "hidden" : true}, 
+								  { "valueAxis": "v1", "lineColor": "#00CF00", "fillColors": "#00CF00", "fillAlphas": 0.9, "bullet": "square", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Traffic", "balloonText": "Traffic In = [[value]]", "valueField": "traffic"}, 
+								  { "valueAxis": "v1", "lineThickness" : 2, "lineColor": "#ff0000", "bullet": "diamond", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Traffic Alert", "balloonText": "Traffic Alert = [[value]]", "valueField": "traffic_alert"},
+							      { "valueAxis": "v1", "lineThickness" : 2, "lineColor": "#ff9900", "bullet": "diamond", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Traffic Warning", "balloonText": "Traffic Warning = [[value]]", "valueField": "traffic_warning"},
+								  { "valueAxis": "v3", "lineThickness" : 1.5, "lineColor": "#13C455", "bullet": "diamond", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Correctables", "balloonText": "", "valueField": "fec_correctables", "hidden" : true}, 
+								  { "valueAxis": "v3", "lineThickness" : 1.5, "lineColor": "#FF4105", "bullet": "diamond", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Uncorrectables", "balloonColor":  "gray" ,"balloonText": "<p> <div style='margin-top:3px; margin-right:5px; float:left; border-radius: 25px;border: 1px solid white;width: 10px;height: 10px; background-color: #13C455;'></div>Correctables = [[fec_correctables]]</p> <p><div style='margin-top:3px; margin-right:5px; float:left; border-radius: 25px;border: 1px solid white;width: 10px;height: 10px; background-color: #FF4105;'></div>Uncorrectables = [[value]] </p>", "valueField": "fec_uncorrectables", "fillAlphas": 0, "hidden" : true}];
+
+						if (category == 'plant') {
+							self.createGraph("usn_chart"+ctr, value['us_data'], "mm", valueAxes, graphs, "date");
+							self.createGraph("usn_chart"+ctr+'snr', value['us_data'], "mm", valueAxes, graphs, "date");
+							ctr++;
+						} else if(category == 'core') {
+							self.createGraph("usn_chart"+ctr+"traffic", value['us_data'], "mm", valueAxes, graphs, "date");
+							ctr++;
+						}
+
+
+						if(value['us_data'][0]){
+							self.cmts_usn_date_srange = moment(value['us_data'][0].date).format('L');
+							self.cmts_usn_time_srange = moment(value['us_data'][0].date).format('HH:mm');
+							self.plant_graph_start = self.reformatData(self.cmts_usn_date_srange +" "+self.cmts_usn_time_srange);
+
+						}
+
+						if(value['us_data'][len]){
+							self.cmts_usn_date_erange = moment(value['us_data'][len].date).format('L');
+							self.cmts_usn_time_erange = moment(value['us_data'][len].date).format('HH:mm');
+							self.plant_graph_end = self.reformatData(self.cmts_usn_date_erange +" "+self.cmts_usn_time_erange);
+
+						}
+					});
+					
+				});
+
+				// this.loader = false;
+		
+			}
+
+		});
+	}
+
+
+	// pang kuha ng plant data and generate ng chart
+	getCMTSStream(type, category, portds_active){
+		var cm_id = this.cm_id;
+		if(cm_id){
+			if(type == "upstream"){
+				// if(this.cmts_us_visible == false){
+				// 	analytics.cmtsUSGraph(cm_id, 'us').then(cmtsUSGraph);
+				// 	// $("#us_graph").removeClass('in out');
+				// 	// this.loader = true;
+				// 	this.cmts_us_visible = true;
+				// }
+				// else{ this.cmts_us_visible = false; }
+			}
+			else if(type == "downstream"){
+				// if(this.cmts_ds_visible == false){
+				// 	analytics.cmtsDSGraph(cm_id, 'ds').then(cmtsDSGraph);
+				// 	// $("#ds_graph").removeClass('in out');
+				// 	// this.loader = true;	
+				// 	this.cmts_ds_visible = true;
+				// }
+				// else{ this.cmts_ds_visible = false; }
+			}
+			else if(type == "upstream_neighbor"){
+				// if(this.cmts_usn_visible == false){
+					this.cmtsNUSGraph(this.upstream_raw, category);
+					// $("#us_neighbor").removeClass('in out');
+					// this.loader = true;
+				// 	this.cmts_usn_visible = true;
+				// }
+				// else{ this.cmts_usn_visible = false; }
+			}
+			else if(type == "downstream_neighbor"){
+				// if(this.cmts_dsn_visible == false){
+				// 	analytics.cmtsNDSGraph(cm_id).then(cmtsNDSGraph);
+					this.cmtsNDSGraph(this.downstream_raw, category, portds_active);
+				// 	// $("#ds_neighbor").removeClass('in out');
+				// 	// this.loader = true;
+				// 	this.cmts_dsn_visible = true;
+				// }
+				// else{ this.cmts_dsn_visible = false; }
+			}
+		}
+	}
+
+	// pag view ng different ports on click
+	upstreamView(action , index){
+ 		var self = this;
+		Object.values(this.upstream).forEach(function(value, key) {
+
+			// console.log(action);
+			// console.log(index);
+			if (action == "plant") {
+
+				var chart1;
+				var chart2;
+				if(typeof index == undefined || index == null){
+					chart1 = "cmts_uschart";
+				}else if(index != null){
+					chart1 = "usn_chart" + key + "snr";
+					chart2 = "usn_chart" + key;
+					// self.activecmts["" + key] = key + "." + action;
+				}
+				// console.log(self.charts);
+				var chart_data_snr;
+				chart_data_snr = self.charts[chart1];
+				var chart_data_fec;
+				chart_data_fec = self.charts[chart2];
+				
+
+			} else if(action == "core") {
+
+				var chart;
+				if(typeof index == undefined || index == null){
+					chart = "cmts_uschart";
+				}else if(index != null){
+					chart = "usn_chart" + key +"traffic";
+					// self.activecmts["" + key] = key + "." + action;
+				}
+
+
+				var chart_data;
+				chart_data = self.charts[chart];
+
+			} else {
+
+				var chart;
+				if(typeof index == undefined || index == null){
+					chart = "cmts_uschart";
+				}else if(index != null){
+					chart = "usn_chart" + key;
+					// self.activecmts["" + key] = key + "." + action;
+				}
+
+
+				var chart_data;
+				chart_data = self.charts[chart];
+
+			}
+
+
+
+			if(action == "count"){
+				// $scope.activecmts = index + ".count";
+				for(var i=0;i < chart_data.graphs.length; i++){
+					if(i == 0 || i == 1){
+						chart_data.showGraph(chart_data.graphs[i]);
+					}else{
+						chart_data.hideGraph(chart_data.graphs[i]);
+					}
+				}
+				return false;
+			}else if(action == "snr"){
+
+				// console.log(chart_data.graphs);
+				
+				for(var i=0;i < chart_data.graphs.length; i++){
+					if(i == 2){
+						chart_data.showGraph(chart_data.graphs[i]);
+					}else{
+						chart_data.hideGraph(chart_data.graphs[i]);
+					}
+				}
+				return false;
+			}else if(action == "fec"){
+				for(var i=0;i < chart_data.graphs.length; i++){
+					if(i == 6 || i == 7){
+						chart_data.showGraph(chart_data.graphs[i]);
+					}else{
+						chart_data.hideGraph(chart_data.graphs[i]);
+					}
+				}
+				return false;
+			}else if(action == "traffic"){
+				for(var i=0;i < chart_data.graphs.length; i++){
+					if(i == 3 || i == 4 || i == 5){
+						chart_data.showGraph(chart_data.graphs[i]);
+					}else{
+						chart_data.hideGraph(chart_data.graphs[i]);
+					}
+				}
+				return false;
+			}else if (action == "plant"){
+
+				// for snr
+				// console.log(chart_data_snr);
+				for(var i=0;i < chart_data_snr.graphs.length; i++){
+					if(i == 2){
+						chart_data_snr.showGraph(chart_data_snr.graphs[i]);
+					}else{
+						chart_data_snr.hideGraph(chart_data_snr.graphs[i]);
+					}
+				}
+
+
+				// for fec
+				for(var i=0;i < chart_data_fec.graphs.length; i++){
+					if(i == 6 || i == 7){
+						chart_data_fec.showGraph(chart_data_fec.graphs[i]);
+					}else{
+						chart_data_fec.hideGraph(chart_data_fec.graphs[i]);
+					}
+				}
+
+				return false;
+			}
+
+		});
+	}
+
+	core_graph_start;
+	core_graph_end;
+
+	// traffic sa core
+	cmtsUSGraph(data){
+
+		// console.log(data.us_data.length);
+
+		var nodes_list = data.nodes;
+		if(data.status == 'failed'){
+			// toaster.pop('error', "Error", data.message);
+			// this.loading = false;
+			// this.showUpstream = false;
+
+		}else{
+
+			if ( data.us_data.length > 0 ) 
+			{
+				 
+
+				// this.showUpstream = true;
+				var 
+				length = data.us_data.length - 1, 
+				temp_snr = 0, 
+				max_snr = 0,
+				temp_online = 0, 
+				temp_offline = 0, 
+				max_online = 0, 
+				max_offline = 0, 
+				temp_cor = 0, 
+				temp_unc = 0, 
+				max_unc = 0,
+				max_cur = 0, 
+				max_tra = 0, 
+				temp_tra = 0;
+
+				for(var counter = length; counter > 0; counter--){
+					length--;
+					 var cursnr = parseFloat(data.us_data[length].snr),
+					 curonline = parseFloat(data.us_data[length].online),
+					 curoffline = parseFloat(data.us_data[length].offline),
+					 curcor = parseFloat(data.us_data[length].fec_correctables),
+					 curunc = parseFloat(data.us_data[length].fec_uncorrectables),
+					 curtra = parseFloat(data.us_data[length].traffic);
+
+					temp_snr += cursnr;
+					temp_online += curonline;
+					temp_offline += curoffline;
+
+					temp_cor += curcor;
+					temp_unc += curunc;
+					temp_tra += curtra; 
+
+					if(cursnr > max_snr){max_snr = cursnr;}
+					if(curonline > max_online){max_online = curonline;}
+					if(curoffline > max_offline){max_offline = curoffline;}
+
+					if(curcor > max_cur){max_cur = curcor;}
+					if(curunc > max_unc){max_unc = curunc;}
+					if(curtra > max_tra){max_tra = curtra;}
+				}
+
+				var snrcurrent = data.us_data[length].snr;
+				var snraverage = (temp_snr / length).toFixed(0);
+				var snrmaximum = max_snr;
+
+				var onlinecurrent = data.us_data[length].online;
+				var onlineaverage = (Math.round(temp_online / length)).toFixed(0);
+				var onlinemaximum = max_online;
+
+				var offlinecurrent = data.us_data[length].offline;
+				var offlineaverage = (Math.round(temp_offline / length)).toFixed(0);
+				var offlinemaximum = max_offline;
+
+				this.feccocurrent = data.us_data[length].fec_correctables;
+				this.feccoaverage =  (temp_cor / length).toFixed(4);
+				this.feccomaximum = max_cur;
+
+				this.fecuncocurrent = data.us_data[length].fec_uncorrectables;
+				this.fecuncoaverage =  (temp_unc  / length).toFixed(4);
+				this.fecuncomaximum = max_unc;
+
+				var data_length = data.us_data.length - 1;	
+				this.tracurrent = data.us_data[data_length].traffic;
+				this.traaverage = ( temp_tra / data_length).toFixed(2);
+				this.tramaximum = max_tra;
+
+				var len = data['us_data'].length - 1;
+				var alert_threshold = data["us_data"][len]['traffic_alert'];
+				var warning_threshold = data["us_data"][len]['traffic_warning'];
+
+				var valueAxes = [{ "id":"v1","maximum": alert_threshold, "bullet" : "square","position": "left"}, 
+								 { "id":"v2","minimum": 0, "guides": [{"value": 25,"lineAlpha": 2,"lineThickness" : 2,"lineColor" : "#44F", "above": true},{"value": 20,"lineAlpha": 2,"lineThickness" : 2,"lineColor" : "#F51D30", "above": true}], "bullet" : "square", "axisColor": "#FE8919", "position": "left"}, 
+								 { "id":"v3","maximum": 6,"guides": [{"value": 0.5,"lineAlpha": 2,"lineThickness" : 2,"lineColor" : "#F51D30", "above": true},{"value": 2.5,"lineAlpha": 2,"lineThickness" : 2,"lineColor" : "#157419", "above": true}], "bullet" : "square", "axisColor": "#000", "position": "left", "axisAlpha": 2},
+								 { "id":"v4", "bullet" : "square","position": "left" }];
+				
+				var graphCount = [{ "valueAxis": "v4", "lineThickness" : 1.5, "lineColor": "#0F0", "bullet": "round", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Online", "balloonText": "Online = [[value]]", "valueField": "online", "fillAlphas": 0}, 
+							  	  { "valueAxis": "v4", "lineThickness" : 1.5, "lineColor": "#F00", "bullet": "round", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Offline", "balloonText": "Offline = [[value]]", "valueField": "offline", "fillAlphas": 0}]; 	  
+				var graphSnr = [{ "valueAxis": "v2", "lineColor": "#FF7D00", "fillColors": "#FF7D00", "fillAlphas": 0.9, "bullet": "square", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "SNR", "balloonText": "SNR = [[value]]", "valueField": "snr"}];	
+				
+				var graphFec = [{ "valueAxis": "v3", "lineThickness" : 1.5, "lineColor": "#13C455", "bullet": "diamond", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Correctables", "balloonText": "", "valueField": "fec_correctables"}, 
+							  	{ "valueAxis": "v3", "lineThickness" : 1.5, "lineColor": "#FF4105", "bullet": "diamond", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Uncorrectables", "balloonColor":  "gray" ,"balloonText": "<p> <div style='margin-top:3px; margin-right:5px; float:left; border-radius: 25px;border: 1px solid white;width: 10px;height: 10px; background-color: #13C455;'></div>Correctables = [[fec_correctables]]</p> <p><div style='margin-top:3px; margin-right:5px; float:left; border-radius: 25px;border: 1px solid white;width: 10px;height: 10px; background-color: #FF4105;'></div>Uncorrectables = [[value]] </p>", "valueField": "fec_uncorrectables", "fillAlphas": 0}];
+				
+				var graphTraffic = [{ "valueAxis": "v1", "lineColor": "#00CF00", "fillColors": "#00CF00", "fillAlphas": 0.9, "bullet": "square", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Traffic", "balloonText": "Traffic In = [[value]]", "valueField": "traffic"},
+									{ "valueAxis": "v1", "lineThickness" : 2, "lineColor": "#ff0000", "bullet": "diamond", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Traffic Alert", "balloonText": "Traffic Alert = [[value]]", "valueField": "traffic_alert"},
+									{ "valueAxis": "v1", "lineThickness" : 2, "lineColor": "#ff9900", "bullet": "diamond", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Traffic Warning", "balloonText": "Traffic Warning = [[value]]", "valueField": "traffic_warning"}]
+				
+				// this.createGraph("cmts_uschart_count", data["us_data"], "mm", valueAxes, graphCount, "date");
+				// this.createGraph("cmts_uschart_snr", data["us_data"], "mm", valueAxes, graphSnr, "date");
+				// this.createGraph("cmts_uschart_fec", data["us_data"], "mm", valueAxes, graphFec, "date");
+				// console.log(data["us_data"]);
+				this.createGraph("cmts_uschart_traffic", data["us_data"], "mm", valueAxes, graphTraffic, "date" );
+				this.createGraph("usn_chart"+this.port_active+"traffic", data["us_data"], "mm", valueAxes, graphTraffic, "date" );
+				
+
+				if(data['us_data'][0]){
+					this.cmts_date_srange = moment(data['us_data'][0].date).format('L');
+					this.cmts_time_srange = moment(data['us_data'][0].date).format('HH:mm');
+					this.core_graph_start = this.reformatData(this.cmts_date_srange+" "+this.cmts_time_erange);
+				}
+
+				if(data['us_data'][data['us_data'].length - 1]){
+					this.cmts_date_erange = moment(data['us_data'][data['us_data'].length-1].date).format('L');
+					this.cmts_time_erange = moment(data['us_data'][data['us_data'].length-1].date).format('HH:mm');
+					this.core_graph_end = this.reformatData(this.cmts_date_erange+" "+this.cmts_time_erange);
+				}
+			}
+			else 
+			{
+				this.createGraph("cmts_uschart_traffic", [], "mm", valueAxes, graphTraffic, "date" );
+				this.createGraph("usn_chart"+this.port_active+"traffic", [], "mm", valueAxes, graphTraffic, "date" );
+
+				// setTimeout(()=>{     
+				// 	this.historicValueAxes({"freq" : "freq_chart"} , "historic", []);
+			 // 	}, 1500);
+
+			}
+		}
+	}
+
+	getUSGraphData(display, category){
+		const upstream_body = {postData:[]}
+		this.http.post<any>('http://182.18.194.188/nms/authbasic/upstream/'+this.cm_id+'.'+display, upstream_body).subscribe(data => {
+			this.upstream = data.stream_data;
+			this.upstream_raw = data;
+ 
+			this.cmtsNUSGraph(this.upstream_raw, category);
+
+			return true;
+		});
+
+		
+	}
+
+	cmtsGraphData;
+
+	getCMTSGraphData(cm_id, type, display, postdata, change_type){
+		// console.log('getCMTSGraphData');
+		if(!display && type == "ds"){ display = ""; }
+		if(display == undefined){
+			display = 3;
+		}
+
+		if(type == "us"){ var url = "api/centralstream/us/" + cm_id + "."+ display; }
+		else if(type == "ds"){ var url = "api/centralstream/ds/"  + cm_id  +"."+ display;}
+		else if(type=="summaryds"){ var url = "api/centralstream/ds/" + cm_id +"."+ display + '.summary'}
+		else if(type=="summaryus"){ var url = "api/centralstream/us/" + cm_id +"."+ display + '.summary'}
+
+		if(postdata == undefined){
+			var body = [];
+		}
+ 		
+ 		const input = {port: this.port_array[this.port_active]};
+ 
+    	this.http.post<any>('http://182.18.194.188/nms/authbasic/'+url, input).subscribe(data => {
+    		this.cmtsGraphData = data;
+    		this.cmtsUSGraph(data);
+
+    		if (change_type == 'port_change') 
+    		{
+
+	    		if (data.us_data.length > 0 ) {
+	    			this.getHistoricGraph('d', 'view', '', 'core');
+
+	    			const upstream_body = {postData:[]}
+	 		
+		    		this.http.post<any>('http://182.18.194.188/nms/authbasic/upstream/'+this.cm_id+'.'+display, upstream_body).subscribe(data => {
+		    			this.upstream = data.stream_data;
+		    		});
+	    		}
+	    		else 
+	    		{
+	    			this.historicValueAxes({"freq" : "freq_chart"} , "historic", []);
+	    		}
+
+			}
+
+			this.loader = false;
+		});
+ 	
+	}
+
+	summary_neighbor;
+	tracurrent_ds;
+	traaverage_ds;
+	tramaximum_ds;
+
+	cmtsNDSGraph(data, category, portds_active){
+		var data = this.downstream_raw;
+		var selectOptions = [];
+
+		var color = ["#0F0", "#00CF00", "#00BF47", "#00BF47", "#00A348", "#009485" , "#008A6D", 
+					"#008A77", "#008A6D", "#007283", "#00694A", "#005D57", "#004359", "#00234B", "#001D61", "#00004D"];
+ 
+		var self = this;
+		Object.values(data.stream_data).forEach(function(value, key) {
+ 
+			var length = value['ds_data'].length - 1,c = value['ds_data'].length - 1,average_duration =  value['ds_data'].length - 1,
+			temp_ds = 0,max_ds = 0,temp_ds= 0,sizel = (length > 864) ? length - 864 : length;
+
+			for(var counter = average_duration; counter > 0; counter--){
+				var curds = parseFloat(value['ds_data'][length].traffic);
+				length--;
+				temp_ds += curds;
+				if(max_ds < curds){ max_ds = curds }
+			}
+
+			var max_ds_average = self.getMaxDownstreamData(value['ds_data']);
+
+			Object.values(data.stream_data)[key]['traffic_current'] = (value['ds_data'][c].traffic).toFixed(2);
+			Object.values(data.stream_data)[key]['traffic_average'] = (temp_ds / average_duration).toFixed(2);
+			Object.values(data.stream_data)[key]['traffic_max'] = (max_ds).toFixed(2);
+			var new_max = self.getMaxDS(value['ds_data']);
+			new_max = (new_max).toFixed(2);
+ 
+ 			var ds_port_threshold
+ 			var ds_critical
+ 			var ds_alarming
+ 			var ds_warning
+ 			var ds_good
+
+			if (self.status_info.status){
+				ds_port_threshold = self.status_info.status.threshold;
+	            ds_critical = ds_port_threshold * self.status_info.status.threshold_critical;
+	            ds_alarming = ds_port_threshold * self.status_info.status.threshold_alarming;
+	            ds_warning = ds_port_threshold * self.status_info.status.threshold_warning;
+	            ds_good = ds_port_threshold * self.status_info.status.threshold_good;
+			}
+			else{
+				ds_port_threshold = 37;
+	            ds_critical = ds_port_threshold;
+	            ds_alarming = ds_port_threshold * .95;
+	            ds_warning = ds_port_threshold * .90;
+	            ds_good = ds_port_threshold * .70;
+			}
+
+			var traout;
+            
+            if(new_max < ds_good){
+            	traout = "good";
+            }
+            else if(new_max < ds_warning){
+                traout = "good";
+            }else if(new_max < ds_alarming){
+                traout = "alarming";
+            }else if(new_max >= ds_critical || new_max <= ds_critical){
+                traout = "critical";
+            }
+            else{
+                traout = "good";
+            }
+
+			selectOptions.push({
+				name : key,
+				data : value['ds_data'],
+				traout : traout,
+				traoutcurrent : Object.values(data.stream_data)[key]['traffic_current'],
+				traoutaverage : Object.values(data.stream_data)[key]['traoutaverage'],
+				traoutmaximum : (max_ds).toFixed(2) + "(" + new_max + ")"
+			});
+
+		});
+
+		// console.log(selectOptions);
+		this.ds_ports = selectOptions;
+
+		var ctr = 0;
+		var alpha = 2;
+		var downstream_neighbor = [];
+
+		Object.values(data.stream_data).forEach(function(value, key) {
+			downstream_neighbor.push(
+				{ "valueAxis": "v1", "lineColor": color[ctr],"type": "step", "bullet": "round", "bulletBorderThickness": 1, "hideBulletsCount": 1, "title": key , "balloonText": key + " [[value]]", "valueField": key, "lineThickness" : 30, "lineAlpha" : 1}
+			)
+			alpha -= .1;
+			ctr++;
+		})
+		// test
+		// console.log(downstream_neighbor);
+		this.summary_neighbor = downstream_neighbor;
+
+		// $timeout(function(){
+			var valueAxes = [{ "id":"v1", "guides": [{"value": 28,"lineAlpha": 2,"lineThickness" : 2,"lineColor" : "#FF9900", "above": true},{"value": 35,"lineAlpha": 1,"lineThickness" : 1,"lineColor" : "#FF0000", "above": true}] , "position": "left"}]; 
+			var graphs = [{ "valueAxis": "v1", "lineColor": "#032D98", "bullet": "round", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Traffic Out", "balloonText": "Traffic Out = [[value]]", "valueField": "traffic", "fillAlphas": 0}];
+			var ctr = 0;
+
+			var self = this;
+ 
+			Object.values(data.stream_data).forEach(function(value, key) {
+				if (portds_active == key) 
+				{
+					self.tracurrent_ds = value['traffic_current'];
+					self.traaverage_ds = value['traffic_average'];
+					self.tramaximum_ds = value['traffic_max'];
+
+					self.createGraph("dsn_chart"+ctr, value['ds_data'], "mm", valueAxes, graphs, "date");
+					ctr++;
+
+					if(value[0]){
+						self.cmts_dsn_date_srange = moment(value['ds_data'][0].date).format('L');
+						self.cmts_dsn_time_srange = moment(value['ds_data'][0].date).format('HH:mm');
+					}
+ 
+					if(value[Object.keys(value).length - 1]){
+						self.cmts_dsn_date_erange = moment(value[Object.keys(value['ds_data']).length - 1].date).format('L');
+						self.cmts_dsn_time_erange = moment(value[Object.keys(value['ds_data']).length - 1].date).format('HH:mm');
+					}
+				}
+
+			});
+		// });
+	}
+
+	getMaxDownstreamData(downstream){
+		var downstream_bydate = [];
+		var dates_max = [];
+		var temp_max = 0;
+		var length = 0;
+		
+		for(var i = 0; i< downstream.length - 1 ;i++){
+			var date = downstream[i].date.split(" ");
+			if(!downstream_bydate[date[0]]){
+				downstream_bydate[date[0]] = [ downstream[i] ];
+			}else{
+				downstream_bydate[date[0]].push(downstream[i]);
+			}
+		}
+
+		for(var ds_date in downstream_bydate){
+			var max_ds = 0;
+			length++;
+			for(var ic = 0; ic < downstream_bydate[ds_date].length - 1; ic++){
+				var current = downstream_bydate[ds_date][ic].traffic;
+				if(current > max_ds){ max_ds = current };
+			}
+			dates_max[ds_date] = max_ds;
+			temp_max += max_ds;
+		}
+
+		return temp_max / length;
+	}
+
+
+	getMaxDS(data){
+		var temp_max;
+		var max_ds;
+		var count = data.length;
+		var percentile = Math.floor(count * .95);
+		var temp_data = [];
+
+		data.forEach(function(value, key) {		
+			temp_data.push({
+				traffic : value.traffic,
+			});
+		});
+
+		temp_data.sort(function(a, b){
+		    var a1 = a.traffic, b1= b.traffic;
+		    if(a1== b1) return 0;
+		    return a1 > b1? 1: -1;
+		});
+
+		temp_max = temp_data.slice(0, percentile);
+		max_ds = temp_data[temp_max.length - 1];
+
+		return max_ds.traffic;
+	}
+
+	spanDSCore(span)
+	{
+		this.loader = true;
+		const downstream_body = {postData:[]}
+		this.http.post<any>('http://182.18.194.188/nms/authbasic/api/downstream/'+this.cm_id+'.'+span+'.list', downstream_body).subscribe(data => {
+			this.downstream = data.stream_data;
+			this.downstream_summary = data.ds_summary;
+			this.downstream_raw = data;
+
+			this.portDS(0, 'core');
+			this.loader = false;
+		});
+	}
+
+	us_toggle = true;
+	ds_toggle = false;
+
+	UsDsToggle(toggle)
+	{
+		if (toggle == "us") {
+ 			
+			this.us_toggle = true;
+			this.ds_toggle = false;
+			this.portRow(0, 'core');
+		} 
+
+		if (toggle == "ds") {
+ 			
+			this.us_toggle = false;
+			this.ds_toggle = true;
+			this.portRow(0, 'core');
+		}
+	}
+
+
 }

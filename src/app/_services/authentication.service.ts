@@ -32,6 +32,7 @@ export class AuthenticationService {
                         username: username,
                         firstName: user.data.FNAME,
                         lastName: user.data.LNAME,
+                        user_type: user.data.remarks,
                         token: btoa(username + ':' +password),
                     };
 

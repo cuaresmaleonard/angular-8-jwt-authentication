@@ -1,6 +1,6 @@
 ﻿import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-import { ReactiveFormsModule } from '@angular/forms';
+import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 
 // used to create fake backend
@@ -16,6 +16,7 @@ import { AnalyticsComponent } from './analytics/analytics.component';
 import { IncidentsComponent } from './incidents/incidents.component';
 import { PathtrakComponent } from './pathtrak/pathtrak.component';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
+import { ProfileComponent } from './profile/profile.component';
 
 @NgModule({
     imports: [
@@ -23,7 +24,8 @@ import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
         ReactiveFormsModule,
         HttpClientModule,
         appRoutingModule,
-        NgbModule
+        NgbModule,
+        FormsModule
     ],
     declarations: [
         AppComponent,
@@ -31,7 +33,8 @@ import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
         LoginComponent,
         AnalyticsComponent,
         IncidentsComponent,
-        PathtrakComponent  
+        PathtrakComponent ,
+        ProfileComponent 
     ],
     providers: [
         { provide: HTTP_INTERCEPTORS, useClass: JwtInterceptor, multi: true },

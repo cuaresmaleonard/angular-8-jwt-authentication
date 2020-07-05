@@ -7,16 +7,20 @@ import { User } from './_models';
 import { Location } from '@angular/common';
 import { filter } from 'rxjs/operators';
 
+import { HttpClient } from '@angular/common/http';
+
 @Component({ selector: 'app', templateUrl: 'app.component.html' })
 export class AppComponent {
     currentUser: User;
     route: string;
     public currentUserInfo;
+    profile;
 
     constructor(
         private router: Router,
         private authenticationService: AuthenticationService,
-        private location: Location
+        private location: Location,
+        private http: HttpClient
     ) {
         this.authenticationService.currentUser.subscribe(x => this.currentUser = x);
         this.currentUserInfo = this.authenticationService.currentUser.source['_value'];
@@ -27,6 +31,16 @@ export class AppComponent {
         });
     }
     
+    ngOnInit() {
+        this.viewProfile();
+
+    }
+
+    viewProfile() {
+        this.http.post<any>('http://182.18.194.188/nms/authbasic/view_profile', []).subscribe(data => {
+            this.profile = data[0];
+        });
+    }
 
     logout() {
         this.authenticationService.logout();

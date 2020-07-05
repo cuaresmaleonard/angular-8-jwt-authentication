@@ -1,0 +1,43 @@
+.card:hover {
+	cursor:pointer;
+}
+
+.card-profile {
+	background: #5454d5;
+	color: white;
+}
+
+.text-muted {
+	color: white !important;
+}
+
+#spinner-back {
+	position: fixed;
+	top: 0;
+	left: 0;
+	opacity: 0;
+	width: 100%;
+	transition: all 1s;
+	opacity:0.5;
+}
+#spinner-front {
+	position: fixed;
+	top: 0;
+	left: 0;
+	opacity: 0;
+	transition: all 1s;
+	left: 49%;
+}
+
+#spinner-front {
+  z-index: 999;
+  margin-top: 45vh;
+  color: #fff;
+  text-align: center;
+}
+
+#spinner-back {
+  z-index: 998;
+  height: 100vh;
+  background: #000;
+}

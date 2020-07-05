@@ -539,7 +539,7 @@ nav.navbar .messages a {
 }
 
 nav.navbar .dropdown-item {
-  padding: 1rem !important;
+  padding: 0.8rem !important;
   border-bottom: 1px solid #393c43;
 }
 
@@ -614,7 +614,7 @@ nav.navbar .dropdown-item.message .content .date {
 }
 
 nav.navbar .tasks-list strong {
-  font-size: 1rem;
+  font-size: 0.9rem;
 }
 
 nav.navbar .tasks-list span {
@@ -1004,7 +1004,7 @@ nav#sidebar.shrinked a[aria-expanded="true"]::after {
 */
 /* Statistic Block */
 .statistic-block {
-  padding: 15px;
+  padding: 12px;
   background: #2d3035;
   color: #8a8d93;
 }
@@ -1743,7 +1743,7 @@ nav#sidebar.shrinked a[aria-expanded="true"]::after {
 .form-control:focus {
   color: #979a9f;
   background-color: transparent;
-  border-color: #0008b1;
+  border-color: #979a9f;
   outline: none;
   -webkit-box-shadow: 0 0 0 0.2rem rgba(55, 207, 220, 0.25);
   box-shadow: 0 0 0 0.2rem rgba(55, 207, 220, 0.25);
@@ -1868,7 +1868,7 @@ input[type='submit'] {
 }
 
 .input-group .dropdown-menu a:hover {
-  color: #0008b1;
+  color: #d2d4ff;
   background: none !important;
 }
 
@@ -2086,7 +2086,11 @@ input.input-material ~ label.is-invalid ~ label {
 
 .table-bordered td,
 .table-bordered th {
-  border-color: #343a40;
+  border-color: #8a8a8a;
+}
+
+.table-bordered-summary td, .table-bordered-summary th {
+    border-color: #ffffff !important;
 }
 
 @media (max-width: 991px) {

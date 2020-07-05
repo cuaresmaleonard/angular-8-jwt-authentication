@@ -5,6 +5,7 @@ import { LoginComponent } from './login';
 import { AnalyticsComponent } from './analytics/analytics.component';
 import { IncidentsComponent } from './incidents/incidents.component';
 import { PathtrakComponent } from './pathtrak/pathtrak.component';
+import { ProfileComponent } from './profile/profile.component';
 import { AuthGuard } from './_helpers';
 
 const routes: Routes = [
@@ -13,7 +14,8 @@ const routes: Routes = [
     { path: 'analytics', component: AnalyticsComponent, canActivate: [AuthGuard] },
     { path: 'incidents', component: IncidentsComponent, canActivate: [AuthGuard] },
     { path: 'pathtrak', component: PathtrakComponent, canActivate: [AuthGuard] },
-    
+    { path: 'profile', component: ProfileComponent, canActivate: [AuthGuard] },
+
     // otherwise redirect to home
     { path: '**', redirectTo: '' }
 ];
