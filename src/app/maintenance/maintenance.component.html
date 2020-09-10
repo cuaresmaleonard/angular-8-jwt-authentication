@@ -1,0 +1,272 @@
+<!-- loader -->
+<div id="spinner-front" class="spinner-grow" role="status" *ngIf="loader">
+  	<span class="sr-only">Loading...</span>
+</div>
+<div id="spinner-back" *ngIf="loader"></div>
+
+<div class="page-header">
+	<div class="container-fluid">
+		<h2 class="h5 no-margin-bottom">Maintenance - Analytics</h2>
+	</div>
+</div>
+
+<section id="analytics-pin-search" class="no-padding-top no-padding-bottom">
+	<div class="container-fluid">
+		<div class="row">
+	        	<div class="col-lg-6">
+	  				<div class="block margin-bottom-sm" style="margin-bottom: unset !important;">
+	  					<div class="title"><strong>Modulation Profile</strong></div>
+  	        			<div class="table-responsive"> 
+	  						<table  class="table table-sm table-striped table-bordered text-center">
+	  							<tbody>
+	  								<tr>
+	  									<th style="width: 25%;">Actions</th>
+	  									<th style="width: 25%;">Modulation</th>
+	  									<th style="width: 25%;">3.2Mhz</th>
+	  									<th style="width: 25%;">6.4Mhz</th>
+	  								</tr>
+	  							</tbody>
+	  							<tbody *ngIf="modulation_profile_length">
+
+	  								<tr *ngFor='let profile of modulation_profile' >
+	  									<td>
+	  										<button type="button" class="btn btn-sm btn-danger" (click)="viewModulationProfileId(profile);" data-toggle="modal" data-target="#update-modal-mod-profile">Update</button>
+	  									</td>
+	  									<th>{{profile.modulation}}</th>
+	  									<td>{{profile.frequency_3200khz}}</td>
+	  									<td>{{profile.frequency_6400khz}}</td>
+	  									
+	  								</tr>
+	  							</tbody>
+	  							<tbody *ngIf="modulation_profile_length == 0">
+	  								<tr>
+	  									<td colspan="4">
+  									 		No data to display
+	  									</td>
+	  								</tr>
+	  							</tbody>
+	  						</table>
+		  				</div>
+ 
+ 
+	  				</div>
+	          	</div>
+  	        	<div class="col-lg-6">
+  	        		<div class="block margin-bottom-sm" style="margin-bottom: unset !important;">
+  	        			<div class="title"><strong>Modulation Threshold</strong></div>
+	  	        			<div class="table-responsive"> 
+		  						<table  class="table table-sm table-striped table-bordered text-center">
+		  							<tbody>
+		  								<tr>
+		  									<th style="width: 25%;">Actions</th>
+		  									<th style="width: 25%;">Status</th>
+		  									<th style="width: 25%;">Threshold</th>
+		  								</tr>
+		  							</tbody>
+		  							<tbody *ngIf="modulation_threshold_length">
+
+		  								<tr *ngFor='let threshold of modulation_threshold' >
+		  									<td>
+		  										<button type="button" class="btn btn-sm btn-danger" (click)="viewModulationThresholdId(threshold);" data-toggle="modal" data-target="#update-modal-mod-threshold">Update</button>
+		  									</td>
+		  									<th>{{threshold.status}}</th>
+		  									<td>{{threshold.threshold}}</td>
+		  									
+		  								</tr>
+		  							</tbody>
+		  							<tbody *ngIf="modulation_threshold_length == 0">
+		  								<tr>
+		  									<td colspan="4">
+	  									 		No data to display
+		  									</td>
+		  								</tr>
+		  							</tbody>
+		  						</table>
+			  				</div>
+		  			</div>
+  	          	</div>
+	  	</div>
+	</div>
+</section>
+
+<br>
+<div class="page-header">
+	<div class="container-fluid">
+		<h2 class="h5 no-margin-bottom">Maintenance - Pathrak</h2>
+	</div>
+</div>
+
+<section id="pathrak-ip" class="no-padding-top no-padding-bottom">
+	<div class="container-fluid">
+		<div class="row">
+        	<div class="col-lg-6">
+  				<div class="block margin-bottom-sm" style="margin-bottom: unset !important;">
+  					<div class="title"><strong>Pathrak IP</strong></div>
+	        			<div class="table-responsive"> 
+  						<table  class="table table-sm table-striped table-bordered text-center">
+  							<tbody>
+  								<tr>
+  									<th style="width: 25%;">Actions</th>
+  									<th style="width: 25%;">IP Address</th>
+  								</tr>
+  							</tbody>
+  							<tbody *ngIf="pathrak_ip">
+
+  								<tr>
+  									<td>
+  										<button type="button" class="btn btn-sm btn-danger" (click)="viewPathrakIp(pathrak_ip);" data-toggle="modal" data-target="#update-modal-pathrak-ip">Update</button>
+  									</td>
+  									<th>{{pathrak_ip}}</th>
+  									
+  								</tr>
+  							</tbody>
+  						</table>
+	  				</div>
+  				</div>
+          	</div>
+
+        	<div class="col-lg-6">
+        		<div class="block margin-bottom-sm" style="margin-bottom: unset !important;">
+        			<div class="title"><strong>Pathrak API</strong></div>
+	        			<div class="table-responsive"> 
+  						<table  class="table table-sm table-striped table-bordered text-center">
+  							<tbody>
+  								<tr>
+  									<th style="width: 25%;">Actions</th>
+  									<th style="width: 25%;">Name</th>
+  									<th style="width: 25%;">Url</th>
+  								</tr>
+  							</tbody>
+  							<tbody *ngIf="pathrak_api_length">
+
+  								<tr *ngFor='let api of pathrak_api' >
+  									<td>
+  										<button type="button" class="btn btn-sm btn-danger" (click)="viewPathrakApi(api);" data-toggle="modal" data-target="#update-modal-pathrak-api">Update</button>
+  									</td>
+  									<th>{{api.name}}</th>
+  									<td>{{api.api}}</td>
+  									
+  								</tr>
+  							</tbody>
+  							<tbody *ngIf="pathrak_api_length == 0">
+  								<tr>
+  									<td colspan="4">
+									 		No data to display
+  									</td>
+  								</tr>
+  							</tbody>
+  						</table>
+	  				</div>
+  				</div>
+          	</div>
+	  	</div>
+	</div>
+</section>
+
+
+
+<br>
+
+<!-- modal -->
+
+<!-- modulation profile -->
+<div class="modal fade" id="update-modal-mod-profile" tabindex="-1" role="dialog" aria-labelledby="reset-cm-promptTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="reset-cm-promptTitle">Modulation Profile</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body" *ngIf="modulation_profile_update">
+		<label>Modulation Profile</label>
+		<input type="text" class="form-control" [(ngModel)]="modulation_profile_update.modulation" disabled/>
+      	<label>3.2 Mhz</label>
+        <input type="number" step="0.01" class="form-control" [(ngModel)]="modulation_profile_update.frequency_3200khz" />
+        <label>6.4 Mhz</label>
+        <input type="number" step="0.01" class="form-control" [(ngModel)]="modulation_profile_update.frequency_6400khz"/>
+      </div>
+      <div class="modal-footer">
+      	<button type="button" class="btn btn-secondary" data-dismiss="modal" (click)="updateModulationProfile(modulation_profile_update)">Update</button>
+        	<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- modulation profile threshold -->
+<div class="modal fade" id="update-modal-mod-threshold" tabindex="-1" role="dialog" aria-labelledby="reset-cm-promptTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="reset-cm-promptTitle">Modulation Profile Threshold</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body" *ngIf="modulation_threshold_update">
+		<label>Status</label>
+		<input type="text" class="form-control" [(ngModel)]="modulation_threshold_update.status" disabled/>
+      	<label>Threshold (%)</label>
+        <input type="number" step="1" min="1" max="100" class="form-control" [(ngModel)]="modulation_threshold_update.threshold" />
+      </div>
+      <div class="modal-footer">
+      	<button type="button" class="btn btn-secondary" data-dismiss="modal" (click)="updateModulationThreshold(modulation_threshold_update)">Update</button>
+        	<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+ <!-- pathrak ip -->
+<div class="modal fade" id="update-modal-pathrak-ip" tabindex="-1" role="dialog" aria-labelledby="reset-cm-promptTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="reset-cm-promptTitle">Pathrak IP Address</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body" *ngIf="pathrak_ip_update">
+		<label>IP Address</label>
+		<input type="text" class="form-control" [(ngModel)]="pathrak_ip_update"/>
+       
+      </div>
+      <div class="modal-footer">
+      	<button type="button" class="btn btn-secondary" data-dismiss="modal" (click)="updatePathrakIp(pathrak_ip_update)">Update</button>
+        	<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+ <!-- pathrak api -->
+<div class="modal fade" id="update-modal-pathrak-api" tabindex="-1" role="dialog" aria-labelledby="reset-cm-promptTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="reset-cm-promptTitle">Pathrak API</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body" *ngIf="pathrak_api_update">
+		<label>Name</label>
+		<input type="text" class="form-control" [(ngModel)]="pathrak_api_update.name"/>
+      	<label>API</label>
+        <input type="text" class="form-control" [(ngModel)]="pathrak_api_update.api" />
+      </div>
+      <div class="modal-footer">
+      	<button type="button" class="btn btn-secondary" data-dismiss="modal" (click)="updatePathrakApi(pathrak_api_update)">Update</button>
+        	<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+ 

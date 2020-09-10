@@ -1,11 +1,14 @@
-import { Component, OnInit  } from '@angular/core';
+import { Component, OnInit, Injectable  } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { FormGroup, FormControl } from '@angular/forms';
 import { AuthenticationService } from '../_services';
+import { AnalyticsService } from '../_services/analytics.service';
 import { User } from '../_models';
 import * as moment from 'moment';
 import * as jquery from 'jquery';
 import { ActivatedRoute } from '@angular/router';
+// import { EMPTY, Observable, throwError } from 'rxjs';
+// import { map, catchError, retry, shareReplay } from 'rxjs/operators';
 
 declare function test_f(): any;
 declare var AmCharts: any;
@@ -19,6 +22,7 @@ declare var $:any;
 
 export class AnalyticsComponent implements OnInit {
 	loader = true;
+	error;
 	result;
 	cpeChannels_result;
 	cm_info_result;
@@ -33,7 +37,8 @@ export class AnalyticsComponent implements OnInit {
 	core_status = "";
 
 	// account
-	recent_searches = [];
+	recent_searches;
+	pinned_search_length = 0;
 	pinned_searches = [];
 
 	// plant
@@ -47,10 +52,23 @@ export class AnalyticsComponent implements OnInit {
 	downstream;
 	downstream_summary;
 	downstream_raw;
+	upstream_summary;
+	
 	// others
 	port_active = 0;
 	portds_active = 0;
 	status_info;
+	incident_nhm_length = 0;
+	incident_nhm = [];
+	incident_nar_length = 0;
+	incident_nar = [];
+	incident_ntr;
+	open_fault_length = 0;
+	open_fault = [];
+	previous_fault_length = 0;
+	previous_fault = [];
+	fnpr_ctr;
+	ndc_ctr;
 
 	// options
  
@@ -83,7 +101,12 @@ export class AnalyticsComponent implements OnInit {
 	public currentUserInfo;
 	currentUser: User;
 
-	constructor(private http: HttpClient, private authenticationService: AuthenticationService, private activatedRoute: ActivatedRoute) { 
+	constructor(
+		private http: HttpClient, 
+		private authenticationService: AuthenticationService, 
+		private activatedRoute: ActivatedRoute,
+		private analyticsService: AnalyticsService,
+		) { 
 		this.authenticationService.currentUser.subscribe(x => this.currentUser = x);
 		this.currentUserInfo = this.authenticationService.currentUser.source['_value'];
 	}
@@ -110,9 +133,12 @@ export class AnalyticsComponent implements OnInit {
 
 	recentSearchInit() {
 
-		this.http.post<any>('http://182.18.194.188/nms/authbasic/view_search_analytics', []).subscribe(data => {
-			this.recent_searches = data;
-
+		return this.analyticsService.initRecentSearch()
+		.subscribe((data : any)  => {
+			if ( data.length > 0 ) 
+			{
+				this.recent_searches = data;
+			}
 			this.init1 = true;
 			this.oninitLoader();
 		});
@@ -121,12 +147,16 @@ export class AnalyticsComponent implements OnInit {
 
 	pinnedSearchInit() {
 
-	    this.http.post<any>('http://182.18.194.188/nms/authbasic/view_pinned_analytics', []).subscribe(data => {
-	      this.pinned_searches = data.raw;
-
-	      this.init2 = true;
-	      this.oninitLoader();
-	    });
+		return this.analyticsService.initPinnedSearch()
+		.subscribe((data : any)  => {
+	    	if ( data.raw != undefined ) 
+	    	{
+	    		this.pinned_search_length = data.raw.length;
+	    		this.pinned_searches = data.raw;
+	    	}
+			this.init2 = true;
+			this.oninitLoader();
+		});
 
 	}
 
@@ -147,15 +177,19 @@ export class AnalyticsComponent implements OnInit {
 		this.account_search_request4 = false;
 		this.account_search_request5 = false;
 		this.account_search_request6 = false;
+		this.drop_status = "";
+		this.plant_status = "";
+		this.core_status = "";
 
 		if ( this.accountSearchForm.value.account_number.trim() != "" && this.accountSearchForm.value.account_number.trim().length == 9 ) 
 		{
 			
 			const body = {acct_no: this.accountSearchForm.value.account_number, type: true}; 
-			
-			this.http.post<any>('http://182.18.194.188/nms/authbasic/get_associated_accounts', body).subscribe(data => {
+
+			return this.analyticsService.accountSearch(body)
+			.subscribe((data : any)  => {
+
 			    this.result = data;
-			    // this.loader = false;
 
 			    if (this.result.length == 1) 
 			    {
@@ -163,85 +197,39 @@ export class AnalyticsComponent implements OnInit {
 			    	this.cm_id = this.result[0].cm_id;
 			    	$('#acctinfo-tab').click();
 
-			    	const body = {cm_id: this.cm_id, user_id: this.currentUserInfo.id, duration: 0, type: true};
-			    	// account_search_request1
-			    	this.http.post<any>('http://182.18.194.188/nms/authbasic/cm_info', body).subscribe(data => {
-			    		this.cm_info_result = data;
-			    		this.cm_info = this.cm_info_result[0][0];
-			    		this.cm_parameters = this.cm_info_result[1];
-						// console.log(this.cm_parameters);
-						this.account_search_request1 = true;
-						this.accountSearchLoader();
-			    		// drop graph // function transfered to nav buttons
-			    		// this.getHistoricGraph('d', 'view', '', 'drop'); // function transfered to nav buttons	
+			    	// account_search_request1 | cm info
+			    	const cm_body = {cm_id: this.cm_id, user_id: this.currentUserInfo.id, duration: 0, type: true};
+			    	this.dropCmInfo(cm_body);
 
-			    		// drop status indicator
-			    		this.drop_status = this.cm_parameters.drop_status;
-		    		});
-
+			    	// account_search_request2 | cpe channels
 		    		const cpeChannels_body = {cm_id: this.cm_id};
-		    		// account_search_request2
-		    		this.http.post<any>('http://182.18.194.188/nms/authbasic/cpeChannels', cpeChannels_body).subscribe(data => {
-			    		this.cpeChannels_result = data;
-			    		this.cpeChannels = this.cpeChannels_result;
+		    		this.dropCpeChannels(cpeChannels_body);
 
-			    		this.account_search_request2 = true;
-			    		this.accountSearchLoader();
-		    		});
+		    		// account_search_request3 | upstream
+		    		const upstream_body = {postData:[]};
+		    		this.plantUpstream(this.cm_id, 3, upstream_body)
 
-		    		this.http.get<any>('http://182.18.194.188/nms/authbasic/summaryupstream/'+this.cm_id).subscribe(data => {
-		    			this.summaryupstream = data;
-		    			this.port_sample = this.summaryupstream.ports[0];
+		    		// account_search_request4 | summaryupstream
+		    		this.plantSummaryUpstream(this.cm_id);
+ 		
+		    		// account_search_request5 | core downstream data
+		    		const downstream_body = {postData:[]};
+		    		this.coreDownstream(this.cm_id, 3, downstream_body);
 
-		    			this.account_search_request4 = true;
-		    			this.accountSearchLoader();
-		    		});	    		
+		    		// account_search_request6 | summaryupstream
+		    		this.coreSummaryUpstream(this.cm_id, 3);
 
-		    		const upstream_body = {postData:[]}
-		    		// account_search_request3
-		    		this.http.post<any>('http://182.18.194.188/nms/authbasic/upstream/'+this.cm_id+'.3', upstream_body).subscribe(data => {
-		    			this.upstream = data.stream_data;
-
-		    // 			var resultArray = $.map(this.upstream, function(value, index) { return [value]; });
-						// this.upstream = resultArray.sort();
-		    			// console.log(this.upstream);
-
-		    			this.upstream_raw = data;
-
-		    			this.createPortArray(this.upstream);
-		    			this.account_search_request3 = true;
-		    			this.accountSearchLoader();
-		    			// plant graph // function transfered to nav buttons
-		    			// this.cmtsNUSGraph(this.upstream_raw); // function transfered to nav buttons
-		    			// this.getCMTSStream('upstream_neighbor', 'plant'); // function transfered to nav buttons
-
-		    			// plant status indicator
-		    			this.plant_status = this.upstream_raw.plant_status;
-		    		});
-
-		    		// core downstream data
-		    		const downstream_body = {postData:[]}
-		    		this.http.post<any>('http://182.18.194.188/nms/authbasic/api/downstream/'+this.cm_id+'.3.list', downstream_body).subscribe(data => {
-		    			this.downstream = data.stream_data;
-		    			this.downstream_summary = data.ds_summary;
-		    			this.downstream_raw = data;
-
-		    			this.account_search_request5 = true;
-		    			this.accountSearchLoader();
-		    		});
-
-		    		//summaryupstream
-		    		this.http.get<any>('http://182.18.194.188/nms/authbasic/api/summaryupstream/'+this.cm_id+'.3.list').subscribe(data => {
-		    			this.status_info = data;
-
-		    			this.account_search_request6 = true;
-		    			this.accountSearchLoader();
-		    		});
-
+		    		// network activity
+		    		const nims = {cm_id: this.cm_id};
+		    		this.faultNims(nims);
 		    		
-
+		    		// open fault
+		    		const fault = {account_number: this.accountSearchForm.value.account_number};
+		    		this.faultGet(fault);
+		    		
 			    }
-			    else {
+			    else 
+			    {
 			    	this.loader = false;
 			    	$('.toast').toast('show');
 			    }
@@ -260,6 +248,136 @@ export class AnalyticsComponent implements OnInit {
 
 	// Preserve original property order
   	unsorted() { }
+
+  	dropCmInfo(data)
+  	{
+    	this.analyticsService.dropCmInfo(data)
+    	.subscribe((data : any)  => {
+    		this.cm_info_result = data;
+    		this.cm_info = this.cm_info_result[0][0];
+    		this.cm_parameters = this.cm_info_result[1];
+
+			this.account_search_request1 = true;
+			this.accountSearchLoader();
+    		// drop status indicator
+    		this.drop_status = this.cm_parameters.drop_status;
+		}, error => { this.error = error; this.loader = false; alert("an error has occured") });
+  	}
+
+  	dropCpeChannels(data)
+  	{
+		this.analyticsService.dropCpeChannels(data)
+		.subscribe((data : any)  => {
+    		this.cpeChannels_result = data;
+    		this.cpeChannels = this.cpeChannels_result;
+
+    		this.account_search_request2 = true;
+    		this.accountSearchLoader();
+		}, error => { this.error = error; this.loader = false; alert("an error has occured") });
+  	}
+
+  	plantSummaryUpstream(cm_id)
+  	{
+  		this.analyticsService.plantSummaryUpstream(cm_id)
+  		.subscribe((data : any)  => {
+  			this.summaryupstream = data;
+  			this.port_sample = this.summaryupstream.ports[0];
+
+  			this.account_search_request4 = true;
+  			this.accountSearchLoader();
+  		}, error => { this.error = error; this.loader = false; alert("an error has occured") });   
+  	}
+
+  	plantUpstream(cm_id, days, data)
+  	{
+  		this.analyticsService.plantUpstream(cm_id, days, data)
+  		.subscribe((data : any)  => {
+  			this.upstream = data.stream_data;
+  			this.upstream_raw = data;
+
+  			this.createPortArray(this.upstream);
+  			this.account_search_request3 = true;
+  			this.accountSearchLoader();
+
+  			// plant status indicator
+  			this.plant_status = this.upstream_raw.plant_status;
+  		}, error => { this.error = error; this.loader = false; alert("an error has occured") });
+  	}
+
+  	coreDownstream(cm_id, days, data)
+  	{
+  		this.analyticsService.coreDownstream(cm_id, days, data)
+  		.subscribe((data : any)  => {
+  			this.downstream = data.stream_data;
+  			this.downstream_summary = data.ds_summary;
+  			this.downstream_raw = data;
+  			this.upstream_summary = data.us_summary;
+
+  			this.core_status = data.core_status;
+  			this.account_search_request5 = true;
+  			this.accountSearchLoader();
+  		}, error => { this.error = error; this.loader = false; alert("an error has occured") });
+  	}
+
+  	coreSummaryUpstream(cm_id, days)
+  	{
+  		this.analyticsService.coreSummaryUpstream(cm_id, days)
+  		.subscribe((data : any)  => {
+  			this.status_info = data;
+  			this.account_search_request6 = true;
+  			this.accountSearchLoader();
+  		}, error => { this.error = error; this.loader = false; alert("an error has occured") });
+  	}
+
+  	faultGet(data)
+  	{
+  		this.analyticsService.faultGet(data)
+  		.subscribe((data : any)  => {
+  			this.open_fault_length = data.open_fault.length;
+  			if ( this.open_fault_length > 0 ) {
+  				// console.log(data.open_fault);
+  				this.open_fault = data.open_fault;
+  			}
+  		
+
+  			this.previous_fault_length = data.previous_fault.length;
+  			if ( this.previous_fault_length > 0 ) {
+  				this.previous_fault = data.previous_fault[0];
+  			}
+
+  			if (data) {
+  				this.fnpr_ctr = data.fnpr_ctr;
+  			}
+
+  			if (data) {
+  				this.ndc_ctr = data.ndc_ctr;
+  			}
+
+  		});
+  	}
+
+  	faultNims(data)
+  	{
+  		this.analyticsService.faultNims(data)
+  		.subscribe((data : any)  => {
+			this.incident_nhm_length = data.nhm_activity.length;
+
+			if (this.incident_nhm_length > 0) 
+			{
+				this.incident_nhm = data.nhm_activity[0];
+			}
+
+			this.incident_nar_length = data.nar_activity.length;
+			if (this.incident_nar_length > 0) 
+			{
+				this.incident_nar = data.nar_activity[0];
+			}
+
+			if (data.ntr_notification) {
+				this.incident_ntr = data.ntr_notification;
+			}
+		});
+  	}
 
 	createPortArray(upstream_raw)
 	{
@@ -324,16 +442,20 @@ export class AnalyticsComponent implements OnInit {
 
 	selectedSpanCore;
 	selectedSpanDSCore = 3;
+	portRow_ctr = 0;
 
 	portRow(key, category)
 	{
+		// console.log('portrow');
 		this.loader = true;
 		this.port_active = key;
 
 		new Promise<any>((res, rej) => {
 			// graph creation
-			if (category == 'plant') {
+			if (category == 'plant' && this.portRow_ctr == 0) {
+				// console.log(20);
 				this.getCMTSStream('upstream_neighbor', category, '');
+				this.getImpairedCm();
 			}
 
 			res(true);
@@ -341,7 +463,21 @@ export class AnalyticsComponent implements OnInit {
 		.then(res => {
 			setTimeout(()=>{    //<<<---    using ()=> syntax
 				if (category == 'plant') {
-					this.upstreamView(category, key);
+
+					if (Object.keys(this.charts).length === 0)
+					{
+						// console.log(0);
+						this.portRow_ctr = this.portRow_ctr + 1;
+						this.portRow(key, category);
+					}
+					else
+					{
+						// console.log(1);
+						this.portRow_ctr = 0;
+						this.upstreamView(category, key);
+					}
+
+					
 				} else if (category == 'core') {
 					var postdata = [];
 					this.selectedSpanCore = "3";
@@ -351,13 +487,13 @@ export class AnalyticsComponent implements OnInit {
 					// this.getCMTSGraphData(this.cm_id, "us", undefined, undefined);
 				}
 			      
-		 	}, 1500); 
+		 	}, 3000); 
 		})
 		  .then(res => {  
 			setTimeout(()=>{    //<<<---    using ()=> syntax
 				  // console.log(key);
 			      this.loader = false;
-		 	}, 1500);
+		 	}, 3000);
 		})
 		  .catch(error => {
 			console.log('ERROR:', error.message);
@@ -371,8 +507,8 @@ export class AnalyticsComponent implements OnInit {
 	{
 		const resetCm_body = {ip: this.cm_info.ip_add, cmts: this.cm_info.cmts };
 
-		this.http.post<any>('http://182.18.194.188/nms/authbasic/reset_cm', resetCm_body).subscribe(data => {
-
+		this.analyticsService.resetCm(resetCm_body)
+		.subscribe((data : any)  => {
 			this.checkCM();
 		});
 	}
@@ -385,13 +521,13 @@ export class AnalyticsComponent implements OnInit {
 	{
     	const body = {cm_id: this.cm_id, user_id: this.currentUserInfo.id, duration: 0, type: true};
 
-     	this.http.post<any>('http://182.18.194.188/nms/authbasic/cm_info', body).subscribe(data => {
+    	this.analyticsService.dropCmInfo(body)
+    	.subscribe((data : any)  => {
      		this.cm_info_result = data;
      		this.cm_info = this.cm_info_result[0][0];
      		this.cm_parameters = this.cm_info_result[1];
 
      		this.ping_reset.push(this.cm_parameters.ping);
-     		console.log(this.ping_reset);
      		if(data[1].ping == 0 || data[1].tx == 0) {
      			this.ping_visibility = true;
      			this.checkCM();
@@ -405,6 +541,29 @@ export class AnalyticsComponent implements OnInit {
  		});
  
 
+	}
+
+	impaired_cm;
+	impaired_cm_length;
+
+	getImpairedCm()
+	{
+		const body = {cm_id: this.cm_id};
+
+		this.analyticsService.impairedCm(body)
+		.subscribe((data : any)  => {
+    		
+    		if (data) 
+    		{
+    			this.impaired_cm_length = data.length;
+    			if (this.impaired_cm_length > 0) 
+    			{
+    			 	this.impaired_cm = data[0];
+			 	} 
+    			
+    		}
+
+		});
 	}
 
 	stringToDate(str) {
@@ -421,6 +580,7 @@ export class AnalyticsComponent implements OnInit {
 	drop_graph_data;
 
 	getHistoricGraph(type, display, level, category){
+		// console.log('getHistoricGraph');
 		var cm_id = this.cm_id;
  		this.getLiveGraph('pause');
  		this.loader = true;
@@ -484,13 +644,13 @@ export class AnalyticsComponent implements OnInit {
 					setTimeout(()=>{    //<<<---    using ()=> syntax
 						// console.log('test');
 						self.upstreamView(category, key);
-				 	}, 1500); 
+				 	}, 3000); 
 				})
 				  .then(res => {  
 					setTimeout(()=>{    //<<<---    using ()=> syntax
-						  this.portRow(key, category);
-					      // self.loader = false;
-				 	}, 1500);
+					  	self.portRow(key, category);
+				      	// self.loader = false;
+				 	}, 3000);
 				})
 				  .catch(error => {
 					console.log('ERROR:', error.message);
@@ -542,11 +702,16 @@ export class AnalyticsComponent implements OnInit {
 	fecuncocurrent;
 	fecuncoaverage;
 	fecuncomaximum;
+	snrcurrent_p;
+	snraverage_p;
+	snrmaximum_p;
 
 	drop_graph_start;
 	drop_graph_end;
 
 	cmHistoricGraph(data, category){
+		// console.log(data);
+		// console.log(category);
 
 		if(data.length > 0){
 			var average_duration = data.length - 1 , length = data.length - 1, c = data.length - 1, temp_snr = 0, temp_rx = 0, temp_tx = 0,
@@ -748,9 +913,9 @@ export class AnalyticsComponent implements OnInit {
 		var freq_graphs = [
 						 { "valueAxis": "v1", "balloonFunction" : this.getModProfile1, "lineThickness" : 2, "lineColor": "#FCD202", "bullet": "round", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Upstream Bandwidth", "balloonText": "usBw = [[value]]", "valueField": "usBw", "fillAlphas": 0 }, 
 						 { "valueAxis": "v1", "balloonFunction" : this.getModProfile2, "lineThickness" : 2, "lineColor": "#0ad5f3", "bullet": "round", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Downstream Bandwidth", "balloonText": "dsBw = [[value]]", "valueField": "dsBw", "fillAlphas": 0 }, 
-						 { "valueAxis": "v1", "lineThickness" : 2, "lineColor": "#0ad8f3", "bullet": "round", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Upstream Speed", "balloonText": "usSpeed = [[value]]", "valueField": "usSpeed", "fillAlphas": 0 }, 
-						 { "valueAxis": "v1", "lineThickness" : 2, "lineColor": "#FF0000", "bullet": "square", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Upstream Frequency", "balloonText": "usFreq = [[value]]", "valueField": "usFreq", "fillAlphas": 0 }, 
-						 { "valueAxis": "v1", "lineThickness" : 2, "lineColor": "#0FEB0E", "bullet": "square", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Downstream Frequency", "balloonText": "dsFreq = [[value]]", "valueField": "dsFreq", "fillAlphas": 0 },
+						 // { "valueAxis": "v1", "lineThickness" : 2, "lineColor": "#0ad8f3", "bullet": "round", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Upstream Speed", "balloonText": "usSpeed = [[value]]", "valueField": "usSpeed", "fillAlphas": 0 }, 
+						 // { "valueAxis": "v1", "lineThickness" : 2, "lineColor": "#FF0000", "bullet": "square", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Upstream Frequency", "balloonText": "usFreq = [[value]]", "valueField": "usFreq", "fillAlphas": 0 }, 
+						 // { "valueAxis": "v1", "lineThickness" : 2, "lineColor": "#0FEB0E", "bullet": "square", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Downstream Frequency", "balloonText": "dsFreq = [[value]]", "valueField": "dsFreq", "fillAlphas": 0 },
 						 { "valueAxis": "v2", "balloonFunction" : this.getModProfile3, "lineThickness" : 2, "lineColor": "#4B0082", "bullet": "rount", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Modulation", "balloonText": "mod = [[value]]", "valueField": "mod", "fillAlphas": 0 }
 						 ];
 			
@@ -816,6 +981,7 @@ export class AnalyticsComponent implements OnInit {
 	plant_graph_end;
 
 	createGraph(chart, data, period, valueAxes, graphs, catField){
+		var self = this;
 		// console.log(chart);
 		// this.loader = true;
 		this.charts[chart] =  AmCharts.makeChart(chart, 
@@ -855,15 +1021,17 @@ export class AnalyticsComponent implements OnInit {
 				    "method": function(e){  
 
 				    	e.chart.chartDiv.addEventListener("dblclick", function(){
+
 							if ( e.chart.lastCursorPosition !== undefined ) {
+								// console.log(chart);
 								// get date of the last known cursor position
 								var date = e.chart.dataProvider[ e.chart.lastCursorPosition ][ e.chart.categoryField ];
 								var guide_data = e.chart.dataProvider[e.chart.lastCursorPosition];
 								var check = 0;
 
 								if(chart == 'bw_chart'){
-									var guide_uhsbDL = this.formatTraffic(guide_data.uhsbDL, '','');
-									var guide_uhsbUL = this.formatTraffic(guide_data.uhsbUL, '','');
+									var guide_uhsbDL = self.formatTraffic(guide_data.uhsbDL, '','');
+									var guide_uhsbUL = self.formatTraffic(guide_data.uhsbUL, '','');
 									var guide_ping = guide_data.ping;
 									var text = "DL = "+guide_uhsbDL+" UL = "+guide_uhsbUL+" ping = "+guide_ping;
 									check = 1;
@@ -880,22 +1048,51 @@ export class AnalyticsComponent implements OnInit {
 									var text = "Modulation = "+guide_mod;
 									check = 1;
 								}
+								else if(chart.search("usn_chart") == 0){
+									if ( chart.search("snr") > 0 ) 
+									{
+										var snr = guide_data.snr;
+										var text = "SNR = "+snr;
+										check = 1;
+									}
+									else
+									{
+										var guide_corr = guide_data.fec_correctables;
+										var guide_uncorr = guide_data.fec_uncorrectables;
+										var text = "Correctables = "+guide_corr+" Uncorrectables = "+guide_uncorr;
+										check = 1;
+									}
+
+								}
+								else if(chart =="cmts_uschart_traffic")
+								{
+									var guide_traffic = guide_data.traffic;
+									var text = "Traffic = "+guide_traffic;
+									check = 1;								
+								}
+								else if(chart.search("dsn_chart") == 0)
+								{
+									var guide_traffic = guide_data.traffic;
+									var text = "Traffic = "+guide_traffic;
+									check = 1;		
+								}
+
 
 
 								if(check == 1){
 									// create a new guide
-									// var guide = new AmCharts.Guide();
-									// guide.date = date;
-									// guide.lineAlpha = 1;
-									// guide.lineColor = "#c44";
-									// guide.label = text;
+									var guide = new AmCharts.Guide();
+									guide.date = date;
+									guide.lineAlpha = 1;
+									guide.lineColor = "#c44";
+									guide.label = text;
 									// guide.balloonText = "testing",
-									// guide.above = true;
-									// guide.position = "top";
-									// guide.inside = true;
-									// guide.labelRotation = 90;
-									// e.chart.categoryAxis.addGuide( guide );
-									// e.chart.validateData();
+									guide.above = true;
+									guide.position = "bottom";
+									guide.inside = true;
+									guide.labelRotation = 90;
+									e.chart.categoryAxis.addGuide( guide );
+									e.chart.validateData();
 								}
 							}
 				    	})
@@ -1893,6 +2090,10 @@ export class AnalyticsComponent implements OnInit {
 				this.tracurrent = selectOptions[this.port_active]['tracurrent'];
 				this.traaverage = selectOptions[this.port_active]['traaverage'];
 				this.tramaximum = selectOptions[this.port_active]['tramaximum'];
+
+				this.snrcurrent_p = selectOptions[this.port_active]['snrcurrent'];
+				this.snraverage_p = selectOptions[this.port_active]['snraverage'];
+				this.snrmaximum_p = selectOptions[this.port_active]['snrmaximum'];
 				
 				setTimeout(function(){
 					var ctr = 0;
@@ -1915,14 +2116,16 @@ export class AnalyticsComponent implements OnInit {
 				
 
 
-						var graphs = [{ "valueAxis": "v4", "lineThickness" : 1.5, "lineColor": "#0F0", "bullet": "round", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Online", "balloonText": "Online = [[value]]", "valueField": "online", "fillAlphas": 0, "hidden" : true}, 
-								  { "valueAxis": "v4", "lineThickness" : 1.5, "lineColor": "#F00", "bullet": "round", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Offline", "balloonText": "Offline = [[value]]", "valueField": "offline", "fillAlphas": 0 , "hidden" : true}, 
+						var graphs = [
+								  // { "valueAxis": "v4", "lineThickness" : 1.5, "lineColor": "#0F0", "bullet": "round", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Online", "balloonText": "Online = [[value]]", "valueField": "online", "fillAlphas": 0, "hidden" : true}, 
+								  // { "valueAxis": "v4", "lineThickness" : 1.5, "lineColor": "#F00", "bullet": "round", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Offline", "balloonText": "Offline = [[value]]", "valueField": "offline", "fillAlphas": 0 , "hidden" : true}, 
 								  { "valueAxis": "v2", "lineColor": "#FF7D00", "fillColors": "#FF7D00", "fillAlphas": 0.9, "bullet": "square", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "SNR", "balloonText": "SNR = [[value]]", "valueField": "snr", "hidden" : true}, 
-								  { "valueAxis": "v1", "lineColor": "#00CF00", "fillColors": "#00CF00", "fillAlphas": 0.9, "bullet": "square", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Traffic", "balloonText": "Traffic In = [[value]]", "valueField": "traffic"}, 
-								  { "valueAxis": "v1", "lineThickness" : 2, "lineColor": "#ff0000", "bullet": "diamond", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Traffic Alert", "balloonText": "Traffic Alert = [[value]]", "valueField": "traffic_alert"},
-							      { "valueAxis": "v1", "lineThickness" : 2, "lineColor": "#ff9900", "bullet": "diamond", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Traffic Warning", "balloonText": "Traffic Warning = [[value]]", "valueField": "traffic_warning"},
+								  // { "valueAxis": "v1", "lineColor": "#00CF00", "fillColors": "#00CF00", "fillAlphas": 0.9, "bullet": "square", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Traffic", "balloonText": "Traffic In = [[value]]", "valueField": "traffic"}, 
+								  // { "valueAxis": "v1", "lineThickness" : 2, "lineColor": "#ff0000", "bullet": "diamond", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Traffic Alert", "balloonText": "Traffic Alert = [[value]]", "valueField": "traffic_alert"},
+							      // { "valueAxis": "v1", "lineThickness" : 2, "lineColor": "#ff9900", "bullet": "diamond", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Traffic Warning", "balloonText": "Traffic Warning = [[value]]", "valueField": "traffic_warning"},
+							      { "valueAxis": "v3", "lineThickness" : 1.5, "lineColor": "#aab3b3", "bullet": "diamond", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Base", "balloonText": "<p> <div style='margin-top:3px; margin-right:5px; float:left; border-radius: 25px;border: 1px solid white;width: 10px;height: 10px; background-color: #13C455;'></div>Correctables = [[fec_correctables]]</p> <p><div style='margin-top:3px; margin-right:5px; float:left; border-radius: 25px;border: 1px solid white;width: 10px;height: 10px; background-color: #FF4105;'></div>Uncorrectables = [[fec_uncorrectables]] </p>", "valueField": "base", "hidden" : true}, 
 								  { "valueAxis": "v3", "lineThickness" : 1.5, "lineColor": "#13C455", "bullet": "diamond", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Correctables", "balloonText": "", "valueField": "fec_correctables", "hidden" : true}, 
-								  { "valueAxis": "v3", "lineThickness" : 1.5, "lineColor": "#FF4105", "bullet": "diamond", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Uncorrectables", "balloonColor":  "gray" ,"balloonText": "<p> <div style='margin-top:3px; margin-right:5px; float:left; border-radius: 25px;border: 1px solid white;width: 10px;height: 10px; background-color: #13C455;'></div>Correctables = [[fec_correctables]]</p> <p><div style='margin-top:3px; margin-right:5px; float:left; border-radius: 25px;border: 1px solid white;width: 10px;height: 10px; background-color: #FF4105;'></div>Uncorrectables = [[value]] </p>", "valueField": "fec_uncorrectables", "fillAlphas": 0, "hidden" : true}];
+								  { "valueAxis": "v3", "lineThickness" : 1.5, "lineColor": "#FF4105", "bullet": "diamond", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Uncorrectables", "balloonColor":  "gray" ,"balloonText": "", "valueField": "fec_uncorrectables", "fillAlphas": 0, "hidden" : true}];
 
 						if (category == 'plant') {
 							self.createGraph("usn_chart"+ctr, value['us_data'], "mm", valueAxes, graphs, "date");
@@ -2006,6 +2209,7 @@ export class AnalyticsComponent implements OnInit {
 	// pag view ng different ports on click
 	upstreamView(action , index){
  		var self = this;
+ 		console.log(this.upstream);
 		Object.values(this.upstream).forEach(function(value, key) {
 
 			// console.log(action);
@@ -2105,7 +2309,7 @@ export class AnalyticsComponent implements OnInit {
 				// for snr
 				// console.log(chart_data_snr);
 				for(var i=0;i < chart_data_snr.graphs.length; i++){
-					if(i == 2){
+					if(i == 0){
 						chart_data_snr.showGraph(chart_data_snr.graphs[i]);
 					}else{
 						chart_data_snr.hideGraph(chart_data_snr.graphs[i]);
@@ -2115,7 +2319,7 @@ export class AnalyticsComponent implements OnInit {
 
 				// for fec
 				for(var i=0;i < chart_data_fec.graphs.length; i++){
-					if(i == 6 || i == 7){
+					if(i == 1 || i == 2 || i == 3){
 						chart_data_fec.showGraph(chart_data_fec.graphs[i]);
 					}else{
 						chart_data_fec.hideGraph(chart_data_fec.graphs[i]);
@@ -2233,7 +2437,8 @@ export class AnalyticsComponent implements OnInit {
 				
 				var graphTraffic = [{ "valueAxis": "v1", "lineColor": "#00CF00", "fillColors": "#00CF00", "fillAlphas": 0.9, "bullet": "square", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Traffic", "balloonText": "Traffic In = [[value]]", "valueField": "traffic"},
 									{ "valueAxis": "v1", "lineThickness" : 2, "lineColor": "#ff0000", "bullet": "diamond", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Traffic Alert", "balloonText": "Traffic Alert = [[value]]", "valueField": "traffic_alert"},
-									{ "valueAxis": "v1", "lineThickness" : 2, "lineColor": "#ff9900", "bullet": "diamond", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Traffic Warning", "balloonText": "Traffic Warning = [[value]]", "valueField": "traffic_warning"}]
+									{ "valueAxis": "v1", "lineThickness" : 2, "lineColor": "#ff9900", "bullet": "diamond", "bulletBorderThickness": 1, "hideBulletsCount": 30, "title": "Traffic Warning", "balloonText": "Traffic Warning = [[value]]", "valueField": "traffic_warning"}
+									];
 				
 				// this.createGraph("cmts_uschart_count", data["us_data"], "mm", valueAxes, graphCount, "date");
 				// this.createGraph("cmts_uschart_snr", data["us_data"], "mm", valueAxes, graphSnr, "date");
@@ -2273,9 +2478,18 @@ export class AnalyticsComponent implements OnInit {
 		this.http.post<any>('http://182.18.194.188/nms/authbasic/upstream/'+this.cm_id+'.'+display, upstream_body).subscribe(data => {
 			this.upstream = data.stream_data;
 			this.upstream_raw = data;
- 
-			this.cmtsNUSGraph(this.upstream_raw, category);
 
+
+ 			if ( Object.keys(data).length === 0 ) {
+ 				// code...
+ 			}
+ 			else{
+ 				// console.log('g');
+ 				this.cmtsNUSGraph(this.upstream_raw, category);
+ 				this.portRow(this.port_active, 'plant');
+ 				// this.upstreamView('plant', this.port_active);
+ 			}
+			
 			return true;
 		});
 
@@ -2293,7 +2507,7 @@ export class AnalyticsComponent implements OnInit {
 
 		if(type == "us"){ var url = "api/centralstream/us/" + cm_id + "."+ display; }
 		else if(type == "ds"){ var url = "api/centralstream/ds/"  + cm_id  +"."+ display;}
-		else if(type=="summaryds"){ var url = "api/centralstream/ds/" + cm_id +"."+ display + '.summary'}
+		else if(type=="summaryds"){ var url = "api/centralstream/ds/" + cm_id +"."+ display + '.summary';console.log('test123');}
 		else if(type=="summaryus"){ var url = "api/centralstream/us/" + cm_id +"."+ display + '.summary'}
 
 		if(postdata == undefined){
@@ -2524,6 +2738,16 @@ export class AnalyticsComponent implements OnInit {
 			this.downstream = data.stream_data;
 			this.downstream_summary = data.ds_summary;
 			this.downstream_raw = data;
+
+			var typex = span == "1" ? "1" : span == "7" ? "w" : span == "31" ? "m" : "3" ;
+
+			const cpeChannels_body = {cm_id: this.cm_id, type: typex, start: "", end:"" };
+
+    		this.http.post<any>('http://182.18.194.188/nms/authbasic/graph_data', cpeChannels_body).subscribe(data => {
+    			this.cmHistoricGraph(data, 'core');
+    			this.loader = false;  
+    		});
+
 
 			this.portDS(0, 'core');
 			this.loader = false;

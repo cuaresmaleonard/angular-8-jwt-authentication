@@ -25,7 +25,7 @@ export class HomeComponent {
             this.users = users;
         });
 
-        console.log(this.userService.getAll());
+        // console.log(this.userService.getAll());
  
  
         this.url_get = 'http://182.18.194.188/nms/cmts/dashboard_drop_list';
@@ -37,7 +37,7 @@ export class HomeComponent {
      
         this.http.post<any>(this.url_post, body).subscribe(data => {
             this.postId = data;
-            console.log(this.postId);
+            // console.log(this.postId);
         });
          
         // this.http.get<any>(this.url_get, {headers} ).subscribe(data => {

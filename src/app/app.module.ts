@@ -17,6 +17,8 @@ import { IncidentsComponent } from './incidents/incidents.component';
 import { PathtrakComponent } from './pathtrak/pathtrak.component';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { ProfileComponent } from './profile/profile.component';
+import { MaintenanceComponent } from './maintenance/maintenance.component';
+import { UserComponent } from './user/user.component';
 
 @NgModule({
     imports: [
@@ -34,8 +36,9 @@ import { ProfileComponent } from './profile/profile.component';
         AnalyticsComponent,
         IncidentsComponent,
         PathtrakComponent ,
-        ProfileComponent 
-    ],
+        ProfileComponent ,
+        MaintenanceComponent,
+        UserComponent    ],
     providers: [
         { provide: HTTP_INTERCEPTORS, useClass: JwtInterceptor, multi: true },
         { provide: HTTP_INTERCEPTORS, useClass: ErrorInterceptor, multi: true },

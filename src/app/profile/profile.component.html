@@ -18,9 +18,9 @@
 	  					<div class="title"><strong>Analytics Pinned Accounts</strong></div>
 
 	  					<div class="input-group mb-3">
-	  					  <input type="text" class="form-control" placeholder="Account number" aria-label="Recipient's username" aria-describedby="basic-addon2" [(ngModel)]="account_number" [disabled]="pinned_list.length >= 50">
+	  					  <input type="text" class="form-control" placeholder="Account number" aria-label="Recipient's username" aria-describedby="basic-addon2" [(ngModel)]="account_number" [disabled]="pinned_list_length >= 50">
 	  					  <div class="input-group-append">
-	  					    <button class="btn btn-outline-secondary" type="button" [disabled]="pinned_list.length >= 50" (click)="insertPinnedAnalytics(account_number)">Add</button>
+	  					    <button class="btn btn-outline-secondary" type="button" [disabled]="pinned_list_length >= 50" (click)="insertPinnedAnalytics(account_number)">Add</button>
 	  					  </div>
 	  					</div>
 
@@ -55,12 +55,12 @@
 	  						<p *ngIf="pinned_list_length > 0">Displaying page {{pinned_list_page+1}} of {{pinned_list_length}}</p>
 	  						<nav aria-label="Page navigation example">
 	  						  <ul class="pagination justify-content-end" style="cursor: pointer;">
-	  						    <li class="page-item disabled">
-	  						      <button class="page-link" tabindex="-1">Previous</button>
+	  						    <li class="page-item" [ngClass]="{'disabled': page_index == 0 }">
+	  						      <button class="page-link" tabindex="-1" (click)="paginateNum(page_index-1)">Previous</button>
 	  						    </li>
-	  						    <li class="page-item" *ngFor="let account of pinned_list_paginated | keyvalue;index as i "><button class="page-link" (click)="paginateNum(i)">{{i+1}}</button></li>
-	  						    <li class="page-item">
-	  						      <button class="page-link">Next</button>
+	  						    <li class="page-item" [ngClass]="{'active': i == page_index }" *ngFor="let account of pinned_list_paginated | keyvalue;index as i "><button class="page-link" (click)="paginateNum(i)">{{i+1}}</button></li>
+	  						    <li class="page-item" [ngClass]="{'disabled': page_index == pinned_list_length - 1 }">
+	  						      <button class="page-link" (click)="paginateNum(page_index+1)">Next</button>
 	  						    </li>
 	  						  </ul>
 	  						</nav>
@@ -73,7 +73,7 @@
   	        			<div class="table-responsive"> 
 		  					<div class="card-deck" style="width: 100%;">
 		  					  <div class="card" [ngClass]="{'card-profile': avatar.selected }" *ngFor='let avatar of profile_avatar' (click)="avatarSelect(avatar)">
-		  					    <img class="card-img-top" src="/assets/image/{{avatar.filename}}" alt="Card image cap">
+		  					    <img class="card-img-top" src="nms_mobile/assets/image/{{avatar.filename}}" alt="Card image cap">
 		  					    <div class="card-body">
 		  					      <h5 class="card-title">{{avatar.gender}}</h5>
 		  					      <!-- <p class="card-text">This card has supporting text below as a natural lead-in to additional content.</p> -->

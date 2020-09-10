@@ -1,0 +1,150 @@
+<!-- loader -->
+<div id="spinner-front" class="spinner-grow" role="status" *ngIf="loader">
+  <span class="sr-only">Loading...</span>
+</div>
+<div id="spinner-back" *ngIf="loader"></div>
+<!-- toast -->
+<div class="toast">
+  <div class="toast-header">
+    <!-- <img src="..." class="rounded mr-2" alt="..."> -->
+    <strong class="mr-auto"><i class="icon-info"></i>&ensp;Message</strong>
+    <small>1 min ago</small>
+    <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+  <div class="toast-body">
+
+    	Error! Data not found...
+  </div>
+</div>
+
+<div class="page-header">
+	<div class="container-fluid">
+		<h2 class="h5 no-margin-bottom">User</h2>
+	</div>
+</div>
+
+<section id="user-section" class="no-padding-top no-padding-bottom">
+  	<div class="container-fluid">
+	    <div class="row">
+	    	<div class="col-lg-6">
+				<div class="input-group mb-3">
+				  <div class="input-group-prepend">
+				    <label class="input-group-text" for="inputGroupSelect01">Groups</label>
+				  </div>
+				  <select #selectGroup class="custom-select" id="inputGroupSelect01" (change)="selectGroupChange(selectGroup.value, 0)" [disabled]="error">
+				    <option value="null" selected>Choose...</option>
+				    <option value="all">Select All</option>
+				    <option *ngFor='let option of user_group' [value]="option.department_id">{{option.department_name}}</option>
+				  </select>
+				</div>
+			</div>
+			<div class="col-lg-6">
+				<div class="input-group mb-3">
+				  <input #searchInput type="text" class="form-control" placeholder="" aria-label="Recipient's username" aria-describedby="button-addon2" (change)="searchUsers(searchInput.value, 0)" [disabled]="error">
+				  <div class="input-group-append">
+				    <button class="btn btn-outline-secondary" type="button" id="button-addon2" disabled>Search</button>
+				  </div>
+				</div>
+			</div>
+			<div class="col-lg-12">
+				<table class="table table-sm table-striped table-bordered text-center">
+				  <thead>
+				    <tr>
+				      <th>Actions</th>
+				      <th>Username</th>
+				      <th>Name</th>
+				      <th>Level</th>
+				    </tr>
+				  </thead>
+				  <tbody *ngIf="users_length > 0">
+				    <tr *ngFor="let user of users">
+				      <th>
+				      	<button type="button" class="btn btn-sm btn-danger" data-target="#update-modal-user" data-toggle="modal" (click)="viewUserId(user);" [disabled]="error">Update</button>
+				      </th>
+				      <td>{{user.username}}</td>
+				      <td>{{user.name}}</td>
+				      <td>{{user.user_level}}</td>
+				    </tr>
+				  </tbody>
+				  <tbody *ngIf="users_length == 0">
+						<tr>
+							<td colspan="4">
+						 		No data to display
+							</td>
+						</tr>
+				  </tbody>
+				  
+				</table>
+
+				<br>
+				<p 	*ngIf="page_length > 1 && !loader">Displaying page {{page_index+1}} of {{page_length}}</p>
+
+				<nav aria-label="Page navigation example" *ngIf="page_length < 13 && page_length > 1 && !loader">
+				  <ul class="pagination justify-content-end" style="cursor: pointer;">
+				    <li class="page-item" [ngClass]="{'disabled': page_index+1 <= 1 }">
+				      <button class="page-link" (click)="paginateNum(page_index)">Previous</button>
+				    </li>
+				    
+				    <li class="page-item" [ngClass]="{'active': num-1 == page_index }" *ngFor="let num of page_num ">
+				    	<button class="page-link" (click)="paginateNum(num)" [disabled]="num-1 == page_index">{{num}}</button>
+				    </li>
+				    
+				    <li class="page-item" [ngClass]="{'disabled': page_index+1 >= page_length }">
+				      <button class="page-link" (click)="paginateNum(page_index+2)">Next</button>
+				    </li>
+				  </ul>
+				</nav>
+
+				<nav aria-label="Page navigation example" *ngIf="page_length > 12 && !loader">
+				  <ul class="pagination justify-content-end" style="cursor: pointer;">
+				    <li class="page-item" [ngClass]="{'disabled': page_index+1 <= 1 }">
+				      <button class="page-link" (click)="paginateNum(page_index)">Previous</button>
+				    </li>
+				    
+				    
+				    <li class="page-item" [ngClass]="{'disabled': page_index+1 >= page_length }">
+				      <button class="page-link" (click)="paginateNum(page_index+2)">Next</button>
+				    </li>
+				  </ul>
+				</nav>
+
+			</div>
+		</div>
+	</div>
+</section>
+
+<!-- modal -->
+ <!-- user update modal -->
+<div class="modal fade" id="update-modal-user" tabindex="-1" role="dialog" aria-labelledby="reset-cm-promptTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title" id="reset-cm-promptTitle">User</h6>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body" *ngIf="user_update">
+		<label>Name</label>
+		<input type="text" class="form-control" [(ngModel)]="user_update.name" disabled/>
+      	<label>Username</label>
+        <input type="text" class="form-control" [(ngModel)]="user_update.username" disabled/>
+        <label>Access Level</label>
+        <select class="custom-select" [(ngModel)]="user_update.user_level">
+          <option value="null">Choose...</option>
+          <option value="basic">basic</option>
+          <option value="intermediate">intermediate</option>
+          <option value="advance">advance</option>
+        </select>
+
+      </div>
+      <div class="modal-footer">
+      	<button type="button" class="btn btn-secondary" data-dismiss="modal" (click)="updateUser(user_update)" style="width: 25%;border-radius: 0px;">Update</button>
+        	<button type="button" class="btn btn-secondary" data-dismiss="modal" style="width: 25%;border-radius: 0px;">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+

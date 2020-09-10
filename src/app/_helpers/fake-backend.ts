@@ -43,7 +43,7 @@ export class FakeBackendInterceptor implements HttpInterceptor {
                 username: user.username,
                 firstName: user.firstName,
                 lastName: user.lastName,
-                token: btoa('legcuaresma' + ':' +'leonardo'),
+                // token: btoa('legcuaresma' + ':' +'leonardo'),
             })
 
         }

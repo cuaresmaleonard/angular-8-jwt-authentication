@@ -1,3 +1,125 @@
-<p>
-  pathtrak works!
-</p>
+<!-- loader -->
+<div id="spinner-front" class="spinner-grow" role="status" *ngIf="loader">
+  <span class="sr-only">Loading...</span>
+</div>
+<div id="spinner-back" *ngIf="loader"></div>
+<!-- toast -->
+<div class="toast">
+  <div class="toast-header">
+    <!-- <img src="..." class="rounded mr-2" alt="..."> -->
+    <strong class="mr-auto"><i class="icon-info"></i>&ensp;Message</strong>
+    <small>1 min ago</small>
+    <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+  <div class="toast-body">
+
+    	Error! Data not found...
+  </div>
+</div>
+
+<div class="page-header">
+	<div class="container-fluid">
+		<h2 class="h5 no-margin-bottom">Pathrak</h2>
+	</div>
+</div>
+
+<section id="account-info" class="no-padding-top no-padding-bottom">
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-5 col-sm-12">
+      	<form [formGroup]="pathrakSearchForm" (ngSubmit)="nodePathrakSearch()" autocomplete="on">
+      	<div class="title"><strong>Node</strong></div>
+			<div class="form-group">
+              	<div class="input-group">
+              	  <input type="text" class="form-control form-control-sm" style="height: inherit;" aria-label="Text input with segmented dropdown button" placeholder="Enter the node id here." formControlName="node">
+              	  <div class="input-group-append">
+              	  	<button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="border-radius: 0;">
+              	  	  <span class="sr-only">Toggle Dropdown</span>
+              	  	</button>
+              	    <button type="button" class="btn btn-sm btn-outline-secondary" style="border-top-right-radius: 0.25rem;border-bottom-right-radius: 0.25rem;border-top-left-radius: 0;border-bottom-left-radius: 0;" (click)="nodePathrakSearch()">Search</button>
+
+              	    <div class="dropdown-menu" style="transform: unset !important;width: 100% !important;top: unset !important;color: white;text-align: center;">
+              	    	<label style="width: 100%;background: #636363;color: white;">Recent Searches</label>
+              	    	<div *ngIf="recent_search_length > 0">
+							<a *ngFor="let search of recent_searches" class="dropdown-item" (click)="selectPathrakSearch(search.node)">{{ search.node }}</a>
+						</div>
+<!-- 						<div role="separator" class="dropdown-divider"></div>
+						<label style="width: 100%;background: #636363;color: white;">Pinned</label>
+              	    	<div *ngIf="pinned_search_length > 0">
+							<a *ngFor="let account of pinned_searches" class="dropdown-item" (click)="selectAccountSearch(account.account_number)">{{ account.account_name }}</a>
+						</div> -->
+						<div *ngIf="recent_search_length == 0">No recent search</div>
+              	    </div>
+
+              	  </div>
+              	</div>
+          	</div>
+      	</form>
+      </div>
+		</div>
+  </div>
+</section>
+
+<section id="navigation" class="no-padding-top no-padding-bottom">
+  <div class="container">
+    <label class="text-center w-100" *ngIf="pathtrak_label">{{pathtrak_label}}</label>
+    <table class="table table-bordered text-center" *ngIf="pathtrak_label">
+      <tbody>
+        <tr>
+          <td><button type="button" class="btn btn-secondary" (click)="navTab(0)"><i class="fa fa-bar-chart" aria-hidden="true"></i></button></td>
+          <td><button type="button" class="btn btn-secondary" (click)="navTab(1)"><i class="fa fa-line-chart" aria-hidden="true"></i></button></td>
+          <td><button type="button" class="btn btn-secondary" (click)="navTab(2)"><i class="fa fa-area-chart" aria-hidden="true"></i></button></td>
+          <td><button type="button" class="btn btn-secondary" (click)="navTab(3)"><i class="fa fa-bell-o" aria-hidden="true"></i></button></td>
+          <td><button type="button" class="btn btn-secondary" (click)="navTab(4)"><i class="fa fa-pie-chart" aria-hidden="true"></i></button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+<section id="account-info" class="no-padding-top no-padding-bottom">
+ 
+<div class="w-100" *ngIf="showTab == 0">
+  <br>
+	<a *ngIf="embed_spectrum_info" (click)="newWindowLink(embed_spectrum_raw)" href="#" style="color: white;">{{embed_spectrum_name}}</a>
+	<br>
+	<iframe *ngIf="embed_spectrum_info" width="100%" height="390" [src]="embed_spectrum_info"></iframe>
+	<!-- <embed [src]="trustedUrl" style="width:100%;height: 500px;"> -->
+	<!-- <button (click)="iframeRefresh()">Reload</button> -->
+</div>
+
+
+<div class="w-100"  *ngIf="showTab == 1">
+  <br>
+	<a *ngIf="embed_qamtrak_info" (click)="newWindowLink(embed_qamtrak_raw)" href="#" style="color: white;">{{embed_qamtrak_name}}</a>
+	<br>
+	<iframe *ngIf="embed_qamtrak_info" width="100%" height="390" [src]="embed_qamtrak_info"></iframe>
+</div>
+
+<div class="w-100"  *ngIf="showTab == 2">
+  <br>
+	<a *ngIf="embed_mv_info" (click)="newWindowLink(embed_mv_raw)" href="#" style="color: white;">{{embed_mv_name}}</a>
+	<br>
+	<iframe *ngIf="embed_mv_info" width="100%" height="390" [src]="embed_mv_info"></iframe>
+</div>
+
+<div class="w-100"  *ngIf="showTab == 3">
+  <br>
+	<a *ngIf="embed_ealarm_info" (click)="newWindowLink(embed_ealarm_raw)" href="#" style="color: white;">{{embed_ealarm_name}}</a>
+	<br>
+	<iframe *ngIf="embed_ealarm_info" width="100%" height="390" [src]="embed_ealarm_info"></iframe>
+</div>
+
+<div class="w-100"  *ngIf="showTab == 4">
+  <br>
+	<a *ngIf="embed_pv_info" (click)="newWindowLink(embed_pv_raw)" href="#" style="color: white;">{{embed_pv_name}}</a>
+	<br>
+	<iframe *ngIf="embed_pv_info" width="100%" height="390" [src]="embed_pv_info"></iframe>
+</div>
+
+<br>
+
+
+
+
+ 

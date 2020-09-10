@@ -98,10 +98,10 @@
 
     <div class="d-flex align-items-stretch">
       <!-- Sidebar Navigation-->
-      <nav id="sidebar">
+      <nav id="sidebar" *ngIf="currentUserInfo">
         <!-- Sidebar Header-->
         <div class="sidebar-header d-flex align-items-center">
-          <div class="avatar" *ngIf="profile"><img src="/assets/image/{{profile.filename}}" alt="..." class="img-fluid rounded-circle"></div>
+          <div class="avatar" *ngIf="profile"><img src="nms_mobile/assets/image/{{profile.filename}}" alt="..." class="img-fluid rounded-circle"></div>
           <div class="title">
             <h1 class="h5">{{currentUserInfo.username}}</h1>
             <p>{{currentUserInfo.user_type}}</p>
@@ -110,7 +110,7 @@
         <!-- Sidebar Navidation Menus--><span class="heading">Main</span>
         <ul class="list-unstyled">
           <li [ngClass]="{'active': route === '/' }"><a routerLink="/"> <i class="icon-home"></i>Home </a></li>
-          <li [ngClass]="{'active': route === '/incidents' }"><a routerLink="/incidents"> <i class="icon-grid"></i>Incidents </a></li>
+          <li [ngClass]="{'active': route === '/incidents' }"><a  href="http://182.18.194.138/nocdb" target="_blank"> <i class="icon-grid"></i>Incidents </a></li>
           <li [ngClass]="{'active': route === '/analytics' }"><a routerLink="/analytics"> <i class="fa fa-bar-chart"></i>Analytics </a></li>
           <li [ngClass]="{'active': route === '/pathtrak' }"><a routerLink="/pathtrak"> <i class="icon-padnote"></i>Pathtrak </a></li>
           <!-- <li><a href="#exampledropdownDropdown" aria-expanded="false" data-toggle="collapse"> <i class="icon-windows"></i>Example dropdown </a>
@@ -120,12 +120,13 @@
               <li><a href="#">Page</a></li>
             </ul>
           </li> -->
-          <li><a href="login.html"> <i class="icon-logout"></i>Login page </a></li>
-        </ul><span class="heading">Admin</span>
-        <ul class="list-unstyled">
-          <li> <a href="#"> <i class="icon-settings"></i>Demo </a></li>
-          <li> <a href="#"> <i class="icon-writing-whiteboard"></i>Demo </a></li>
-          <li> <a href="#"> <i class="icon-chart"></i>Demo </a></li>
+          <!-- <li><a href="login.html"> <i class="icon-logout"></i>Login page </a></li> -->
+        </ul>
+        <span class="heading" *ngIf="currentUserInfo.user_type == 'Admin' || currentUserInfo.dept_id == '1' ">Admin</span>
+        <ul class="list-unstyled" *ngIf="currentUserInfo.user_type == 'Admin' || currentUserInfo.dept_id == '1' ">
+          <li [ngClass]="{'active': route === '/maintenance' }"> <a routerLink="/maintenance"> <i class="icon-settings"></i>Maintenance</a></li>
+          <li [ngClass]="{'active': route === '/user' }"> <a routerLink="/user"> <i class="icon-writing-whiteboard"></i>User </a></li>
+          <!-- <li> <a href="#"> <i class="icon-chart"></i>Demo </a></li> -->
         </ul>
       </nav>
       <div class="page-content" [ngClass]="{'w-100': currentUser === null }">

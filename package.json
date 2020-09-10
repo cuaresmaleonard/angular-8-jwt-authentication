@@ -23,6 +23,7 @@
         "@angular/router": "~8.0.1",
         "@ng-bootstrap/ng-bootstrap": "^5.2.2",
         "@types/jquery": "^3.3.36",
+        "angular-font-awesome": "^3.1.2",
         "bootstrap": "^4.4.1",
         "jquery": "^3.5.1",
         "moment": "^2.24.0",

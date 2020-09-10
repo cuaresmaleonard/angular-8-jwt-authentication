@@ -26,14 +26,15 @@ export class AuthenticationService {
             .pipe(map(user => {
 
                 if (user.status == "success") {
-
                     user = {
                         id: user.data.id,
                         username: username,
                         firstName: user.data.FNAME,
                         lastName: user.data.LNAME,
                         user_type: user.data.remarks,
+                        dept_id: user.data.DEPARTMENT_ID,
                         token: btoa(username + ':' +password),
+                        access_level: user.data.user_access,
                     };
 
                     // store user details and jwt token in local storage to keep user logged in between page refreshes

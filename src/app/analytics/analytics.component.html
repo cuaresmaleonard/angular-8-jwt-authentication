@@ -54,25 +54,25 @@
               <div class="col-md-5 col-sm-12">
               	<form [formGroup]="accountSearchForm" (ngSubmit)="accountSearch()" autocomplete="on">
               	<div class="title"><strong>Account Number</strong></div>
-					<div class="form-group">
-		              	<div class="input-group">
-		              	  <input type="text" class="form-control form-control-sm" style="height: inherit;" aria-label="Text input with segmented dropdown button" placeholder="Enter the account number here." formControlName="account_number">
-		              	  <div class="input-group-append">
-		              	  	<button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="border-radius: 0;">
-		              	  	  <span class="sr-only">Toggle Dropdown</span>
-		              	  	</button>
-		              	    <button type="button" class="btn btn-sm btn-outline-secondary" style="border-top-right-radius: 0.25rem;border-bottom-right-radius: 0.25rem;border-top-left-radius: 0;border-bottom-left-radius: 0;" (click)="accountSearch()">Search</button>
-		              	    <div class="dropdown-menu" style="transform: unset !important;width: 100% !important;top: unset !important;color: white;text-align: center;">
-		              	    	<label style="width: 100%;background: #636363;color: white;">Recent Searches</label>
-		              	    	<div *ngIf="recent_searches">
-									<a *ngFor="let account of recent_searches" class="dropdown-item" (click)="selectAccountSearch(account.account_number)">{{ account.account_name }}</a>
-								</div>
-								<div role="separator" class="dropdown-divider"></div>
-								<label style="width: 100%;background: #636363;color: white;">Pinned</label>
-		              	    	<div *ngIf="pinned_searches.length > 0">
-									<a *ngFor="let account of pinned_searches" class="dropdown-item" (click)="selectAccountSearch(account.account_number)">{{ account.account_name }}</a>
-								</div>
-								<div *ngIf="pinned_searches.length == 0">No Pinned Account</div>
+        					<div class="form-group">
+  		              	<div class="input-group">
+  		              	  <input type="text" class="form-control form-control-sm" style="height: inherit;" aria-label="Text input with segmented dropdown button" placeholder="Enter the account number here." formControlName="account_number">
+    		              	  <div class="input-group-append">
+    		              	  	<button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="border-radius: 0;">
+        		              	  	  <span class="sr-only">Toggle Dropdown</span>
+        		              	  	</button>
+        		              	    <button type="button" class="btn btn-sm btn-outline-secondary" style="border-top-right-radius: 0.25rem;border-bottom-right-radius: 0.25rem;border-top-left-radius: 0;border-bottom-left-radius: 0;" (click)="accountSearch()">Search</button>
+  		              	    <div class="dropdown-menu" style="transform: unset !important;width: 100% !important;top: unset !important;color: white;text-align: center;">
+        		              	    	<label style="width: 100%;background: #636363;color: white;">Recent Searches</label>
+        		              	    	<div *ngIf="recent_searches">
+        									<a *ngFor="let account of recent_searches" class="dropdown-item" (click)="selectAccountSearch(account.account_number)">{{ account.account_name }}</a>
+        								</div>
+        								<div role="separator" class="dropdown-divider"></div>
+        								<label style="width: 100%;background: #636363;color: white;">Pinned</label>
+        		              	    	<div *ngIf="pinned_search_length > 0">
+        									<a *ngFor="let account of pinned_searches" class="dropdown-item" (click)="selectAccountSearch(account.account_number)">{{ account.account_name }}</a>
+        								</div>
+        								<div *ngIf="pinned_search_length == 0">No Pinned Account</div>
 		              	    </div>
 		              	  </div>
 		              	</div>
@@ -131,7 +131,7 @@
 	  								</tr>
 	  								<tr>
 	  									<th scope="row">{{ cm_info.acct_no }}</th>
-	  									<td>{{ cm_info.node }}</td>
+	  									<td>{{ cm_info.node }}<span *ngIf="incident_ntr" style="background: red;border: 2px solid white;font-size: 10px;margin-left: 5px;">PT</span></td>
 	  									<td>{{ cm_info.cmts }}</td>
 	  									<td>{{ cm_info.us_port }}</td>
 	  								</tr>
@@ -143,6 +143,12 @@
             </div>
           </div>
         </section>
+
+        <div class="container-fluid">
+          <br>
+          <br>
+          <div style="text-transform: uppercase;" class="text-center">{{incident_ntr}}</div>
+        </div>
         
         <section id="options-nav" class="no-padding-top no-padding-bottom" *ngIf="cm_info">	
         		<br>
@@ -190,7 +196,7 @@
 			  	                      <tbody>
 			  	                      	<tr>
 			  	                      	  <th>Class | Sub-class</th>
-			  	                      	  <td>{{cm_info.acct_class}} | {{cm_info.sub_class}}</td>
+			  	                      	  <td>{{cm_info.acct_class}} <span *ngIf="cm_info.acct_class && cm_info.sub_class">|</span> {{cm_info.sub_class}}</td>
 			  	                      	</tr>
 			  	                        <tr>
 			  	                          <th>Account Name</th>
@@ -243,12 +249,12 @@
           		  	                  				<td [ngClass]="upstream_raw.fec_c_summ_status">Corr FEC</td>
           		  	                  				<td [ngClass]="upstream_raw.fec_u_summ_status">Uncorr FEC</td>
           		  	                  				<td [ngClass]="upstream_raw.snr_summ_status">SNR</td>
-          		  	                  				<td>US MOD</td>
+          		  	                  				<td [ngClass]="upstream_raw.mod_summ_status">US MOD</td>
           		  	                  			</tr>
-          		  	                  			<tr>
-          		  	                  				<td>CORE</td>
-          		  	                  				<td>US</td>
-          		  	                  				<td>DS</td>
+          		  	                  			<tr *ngIf="downstream">
+          		  	                  				<td [ngClass]="downstream_raw.core_status">CORE</td>
+          		  	                  				<td [ngClass]="downstream_summary.ds_util_status">US</td>
+          		  	                  				<td [ngClass]="upstream_summary.us_util_status">DS</td>
           		  	                  				<td>LB</td>
           		  	                  				<td></td>
           		  	                  			</tr>
@@ -262,46 +268,90 @@
 	    	  	                  <div class="title"><strong>Fault Order</strong></div>
 	    		  	                  <div class="table-responsive">
 	    		  	                  <label>Open Fault</label> 
-	    		  	                  	<table class="table table-striped table-bordered text-center">
-	    		  	                  		<tbody>
-	    		  	                  			<tr>
-	    		  	                  				<th width="25%">Fault Type | Report Code</th><td>N/A</td>
-	    		  	                  			</tr>
-	    		  	                  			<tr> 
-	    		  	                  				<th>Fault Number</th><td>N/A</td>
-    		  	                  				</tr>
-	    		  	                  			<tr>	
-	    		  	                  				<th>Fault Stahe | Stg Description</th><td>N/A</td>
-	    		  	                  			</tr>
-	    		  	                  			<tr>
-	    		  	                  				<th>Creation Date</th><td>N/A</td>
-	    		  	                  			</tr>
-	    		  	                  			<tr>
-	    		  	                  				<th>Repeat Fault Counter</th><td>N/A</td>
-	    		  	                  			</tr>
-	    		  	                  		</tbody>
-	    		  	                  	</table>
+                                  <div *ngIf="open_fault_length > 0">
+  	    		  	                  	<table class="table table-striped table-bordered" *ngFor="let fault of open_fault" style="margin-bottom: 15px;">
+  	    		  	                  		<tbody>
+  	    		  	                  			<tr>
+  	    		  	                  				<th width="25%">Fault Type | Report Code</th>
+  	    		  	                  				<td *ngIf="open_fault_length > 0">{{fault.FOTYPE}} | {{fault.RCODE}}</td>
+  	    		  	                  			</tr>
+  	    		  	                  			<tr> 
+  	    		  	                  				<th>Fault Number</th>
+  	    		  	                  				<td *ngIf="open_fault_length > 0">{{fault.FONUM}}</td>
+      		  	                  				</tr>
+  	    		  	                  			<tr>	
+  	    		  	                  				<th>Fault Stage | Stg Description</th>
+  	    		  	                  				<td *ngIf="open_fault_length > 0">{{fault.STAGE}}</td>
+  	    		  	                  			</tr>
+  	    		  	                  			<tr>
+  	    		  	                  				<th>Creation Date</th>
+  	    		  	                  				<td *ngIf="open_fault_length > 0">{{fault.CREATED}}</td>
+  	    		  	                  			</tr>
+  	    		  	                  			<tr>
+  	    		  	                  				<th>Repeat Fault Counter</th>
+  	    		  	                  				<td *ngIf="open_fault_length > 0">{{open_fault_length}}</td>
+  	    		  	                  			</tr>
+  	    		  	                  		</tbody>
+  	    		  	                  	</table>
+                                  </div>
+                                  <table *ngIf="open_fault_length == 0" class="table table-striped table-bordered" style="margin-bottom: 15px;">
+                                    <tbody>
+                                      <tr>
+                                        <th width="25%">Fault Type | Report Code</th>
+                                        <td>N/A</td>
+                                      </tr>
+                                      <tr> 
+                                        <th>Fault Number</th>
+                                        <td>N/A</td>
+                                      </tr>
+                                      <tr>  
+                                        <th>Fault Stage | Stg Description</th>
+                                        <td>N/A</td>
+                                      </tr>
+                                      <tr>
+                                        <th>Creation Date</th>
+                                        <td>N/A</td>
+                                      </tr>
+                                      <tr>
+                                        <th>Repeat Fault Counter</th>
+                                        <td>N/A</td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                  
 	    		  	                  	<br>
 	    		  	                  	<label>Previous Fault</label>
-	    		  	                  	<table class="table table-striped table-bordered text-center">
+	    		  	                  	<table class="table table-striped table-bordered">
 	    		  	                  		<tbody> 
 	    		  	                  			<tr>
-	    		  	                  				<th width="25%">Fault Type | Report Code</th><td>N/A</td>
+	    		  	                  				<th width="25%">Fault Type | Report Code</th>
+	    		  	                  				<td *ngIf="previous_fault_length == 0">N/A</td>
+	    		  	                  				<td *ngIf="previous_fault_length > 0">{{previous_fault.FTYPE}} | {{previous_fault.RCODE}}</td>
 			  	                  				</tr>
 			  	                  				<tr>
-	    		  	                  				<th>Fault Number</th><td>N/A</td>
+	    		  	                  				<th>Fault Number</th>
+	    		  	                  				<td *ngIf="previous_fault_length == 0">N/A</td>
+	    		  	                  				<td *ngIf="previous_fault_length > 0">{{previous_fault.FO_NUM}}</td>
 	    		  	                  			</tr>
 	    		  	                  			<tr>
-	    		  	                  				<th>Creation Date</th><td>N/A</td>
+	    		  	                  				<th>Creation Date</th>
+	    		  	                  				<td *ngIf="previous_fault_length == 0">N/A</td>
+	    		  	                  				<td *ngIf="previous_fault_length > 0">{{previous_fault.CDATE}}</td>
 	    		  	                  			</tr>
 	    		  	                  			<tr>
-	    		  	                  				<th>Completion Date</th><td>N/A</td>
+	    		  	                  				<th>Completion Date</th>
+	    		  	                  				<td *ngIf="previous_fault_length == 0">N/A</td>
+	    		  	                  				<td *ngIf="previous_fault_length > 0">{{previous_fault.PDATE}}</td>
 	    		  	                  			</tr>
 	    		  	                  			<tr>
-	    		  	                  				<th>Findings</th><td>N/A</td>
+	    		  	                  				<th>Findings</th>
+	    		  	                  				<td *ngIf="previous_fault_length == 0">N/A</td>
+	    		  	                  				<td *ngIf="previous_fault_length > 0">{{previous_fault.FINDINGS}}</td>
 	    		  	                  			</tr>
 	    		  	                  			<tr> 
-	    		  	                  				<th>Solution</th><td>N/A</td>
+	    		  	                  				<th>Solution</th>
+	    		  	                  				<td *ngIf="previous_fault_length == 0">N/A</td>
+	    		  	                  				<td *ngIf="previous_fault_length > 0">{{previous_fault.SOLUTION}}</td>
 	    		  	                  			</tr>
 	    		  	                  		</tbody>
 	    		  	                  	</table>
@@ -309,14 +359,127 @@
 			  	                  	</div>
 		  	                  	</div>
       	  	              	</div>
-      	  	              	<div class="col-sm-12"*ngIf="cm_info">
-	    	  	                <div class="block margin-bottom-sm">
-	    	  	                  <div class="title"><strong>Incident</strong></div>
-    		  	                  	<div class="table-responsive" style="text-align: center;"> 
-										N/A
-			  	                  	</div>
-		  	                  	</div>
+      	  	              	<div class="col-sm-12">
+  	    	  	                <div class="block margin-bottom-sm">
+  	    	  	                  <div class="title"><strong>Incident</strong></div>
+      		  	                  	<div class="table-responsive" *ngIf="incident_nhm_length > 0"> 
+  	    		  	                  	<table class="table table-striped table-bordered">
+  	    		  	                  		<thead>
+  	    		  	                  			<tr><th colspan="2" style="background: #b93030;">Network Health Monitoring</th></tr>
+  	    		  	                  		</thead>
+  	    		  	                  		<tbody>
+  	    		  	                  			<tr>
+  	    		  	                  				<th width="25%">Sytem</th><td>{{incident_nhm.NH_SYSTEM}}</td>
+  	    		  	                  			</tr>
+  	    		  	                  			<tr> 
+  	    		  	                  				<th>Node / Cell</th><td>{{incident_nhm.NH_NODE}}</td>
+      		  	                  				</tr>
+  	    		  	                  			<tr>	
+  	    		  	                  				<th>Location</th><td>{{incident_nhm.NH_LOC}}</td>
+  	    		  	                  			</tr>
+  	    		  	                  			<tr>
+  	    		  	                  				<th>PT Code</th><td>{{incident_nhm.NH_EFFECT}}</td>
+  	    		  	                  			</tr>
+  	    		  	                  			<tr>
+  	    		  	                  				<th>Service</th><td>{{incident_nhm.NH_SERVICE}}</td>
+  	    		  	                  			</tr>
+  	    		  	                  			<tr>
+  	    		  	                  				<th>NF #</th><td>{{incident_nhm.NH_ID}}</td>
+  	    		  	                  			</tr>
+  	    		  	                  			<tr>
+  	    		  	                  				<th>Group</th><td>{{incident_nhm.NH_GROUP}}</td>
+  	    		  	                  			</tr>
+  	    		  	                  			<tr>
+  	    		  	                  				<th>Start Date</th><td>{{incident_nhm.NH_ACTSTART}}</td>
+  	    		  	                  			</tr>
+  	    		  	                  			<tr>
+  	    		  	                  				<th>Duration</th><td>{{incident_nhm.duration}}</td>
+  	    		  	                  			</tr>
+  	    		  	                  			<tr>
+  	    		  	                  				<th>Trigger</th><td>{{incident_nhm.NH_TRIGGER}}</td>
+  	    		  	                  			</tr>
+  	    		  	                  			<tr>
+  	    		  	                  				<th>Level</th><td>{{incident_nhm.NH_LEVEL}}</td>
+  	    		  	                  			</tr>
+  	    		  	                  			<tr>
+  	    		  	                  				<th>Category</th><td>{{incident_nhm.NH_CATEGORY}}</td>
+  	    		  	                  			</tr>
+  	    		  	                  			<tr>
+  	    		  	                  				<th>Link</th><td>{{incident_nhm.NH_LINK}}</td>
+  	    		  	                  			</tr>
+  	    		  	                  			<tr>
+  	    		  	                  				<th>Details</th><td>{{incident_nhm.NH_ACTDETAILS}}</td>
+  	    		  	                  			</tr>
+  	    		  	                  			
+  	    		  	                  		</tbody>
+  	    		  	                  	</table>
+  			  	                  	</div>
+  			  	                  	<div style="text-align: center;" *ngIf="incident_nhm_length == 0">
+  			  	                  		<p>No Available NHM Activity</p>
+  			  	                  	</div>
+  		  	                  	</div>
       	  	              	</div>
+                            <div class="col-sm-12">
+                              <div class="block margin-bottom-sm">
+                                <div class="title"><strong>Network Activity</strong></div>
+                                  <div class="table-responsive" *ngIf="incident_nar_length > 0"> 
+                                    <table class="table table-striped table-bordered">
+                                      <thead>
+                                        <tr><th colspan="2" style="background: #00a65a;">Network Activity Details</th></tr>
+                                      </thead>
+                                      <tbody>
+                                        <tr>
+                                          <th width="25%">Sytem</th><td>{{incident_nar.NAR_SYSTEM}}</td>
+                                        </tr>
+                                        <tr> 
+                                          <th>Node / Cell</th><td>{{incident_nar.NAR_NODE}}</td>
+                                        </tr>
+                                        <tr>  
+                                          <th>Location</th><td>{{incident_nar.NAR_LOC}}</td>
+                                        </tr>
+                                        <tr>
+                                          <th>PT Code</th><td>{{incident_nar.NAR_EFFECT}}</td>
+                                        </tr>
+                                        <tr>
+                                          <th>Service</th><td>{{incident_nar.NAR_SERVICE}}</td>
+                                        </tr>
+                                        <tr>
+                                          <th>NF #</th><td>{{incident_nar.NAR_ID}}</td>
+                                        </tr>
+                                        <tr>
+                                          <th>Group</th><td>{{incident_nar.NAR_GROUP}}</td>
+                                        </tr>
+                                        <tr>
+                                          <th>Start Date</th><td>{{incident_nar.NAR_ACTSTART}}</td>
+                                        </tr>
+                                        <tr>
+                                          <th>Duration</th><td>{{incident_nar.duration}}</td>
+                                        </tr>
+                                        <tr>
+                                          <th>Trigger</th><td>{{incident_nar.NAR_TRIGGER}}</td>
+                                        </tr>
+                                        <tr>
+                                          <th>Level</th><td>{{incident_nar.NAR_LEVEL}}</td>
+                                        </tr>
+                                        <tr>
+                                          <th>Category</th><td>{{incident_nar.NAR_CATEGORY}}</td>
+                                        </tr>
+                                        <tr>
+                                          <th>Link</th><td>{{incident_nar.NAR_LINK}}</td>
+                                        </tr>
+                                        <tr>
+                                          <th>Details</th><td>{{incident_nar.NAR_ACTDETAILS}}</td>
+                                        </tr>
+                                        
+                                      </tbody>
+                                    </table>
+                                </div>
+                                <div style="text-align: center;" *ngIf="incident_nar_length == 0">
+                                  <p>No Available Network Activity</p>
+                                </div>
+                              </div>
+                            </div>
+                            
   	              		</div>
   	              	</div>
         		  </div>
@@ -489,79 +652,79 @@
   			  	            			<div *ngIf="chart_hist" class="container-fluid" style="padding-bottom: 6px;">
   			  	            				<label style="text-align: center;width: 100%;">RF Chart</label> 	
   			  	            				<div id="rf_chart" style="width: 100%; height: 400px;margin-bottom: 10px; border: 2px solid #a7a7a7;"></div>
-  			  	            				<table style="width:100%; margin-left:2%; margin-bottom:10px; font-weight:bold; font-size:13px;text-align: center;">
+  			  	            				<table class="parameters-guide">
   			  	            				    <tbody>
   			  	            				        <tr *ngIf="hsf_value" >
   			  	            				            <td style="padding-bottom:15px;text-align: center;" colspan="7">
-  			  	            				                <div style="margin-left:-100px;">
+  			  	            				  
   			  	            				                    {{ drop_graph_start }}                
   			  	            				                    to 
   			  	            				                    {{ drop_graph_end }} 
-  			  	            				                </div>
+  			  	            				           
   			  	            				            </td>
   			  	            				        </tr>
   			  	            				        <tr>
-  			  	            				            <td>TX</td>
-  			  	            				            <td>Current : {{ txcurrent }} </td>
-  			  	            				            <td>Average : {{ txaverage }} </td>
-  			  	            				            <td>Maximum : {{ txmaximum }} </td>
-  			  	            				            <td>Deviation Count : {{ tx_dev_count }} </td>
-  			  	            				            <td>Max Dev. : {{ tx_max_dev }} </td>
-  			  	            				            <td>Min Dev. : {{ tx_min_dev }} </td>
+  			  	            				            <td valign="top">TX</td>
+  			  	            				            <td valign="top">Current : {{ txcurrent }} </td>
+  			  	            				            <td valign="top">Average : {{ txaverage }} </td>
+  			  	            				            <td valign="top">Maximum : {{ txmaximum }} </td>
+  			  	            				  <!--           <td valign="top">Deviation Count : {{ tx_dev_count }} </td>
+  			  	            				            <td valign="top">Max Dev. : {{ tx_max_dev }} </td>
+  			  	            				            <td valign="top">Min Dev. : {{ tx_min_dev }} </td> -->
   			  	            				        </tr>
   			  	            				        <tr>
-  			  	            				            <td>RX</td>
-  			  	            				            <td>Current : {{ rxcurrent }} </td>
-  			  	            				            <td>Average : {{ rxaverage }} </td>
-  			  	            				            <td>Maximum : {{ rxmaximum }} </td>
-  			  	            				            <td>Deviation Count : {{ rx_dev_count }} </td>
-  			  	            				            <td>Max Dev. : {{ rx_max_dev }} </td>
-  			  	            				            <td>Min Dev. : {{ rx_min_dev }} </td>
+  			  	            				            <td valign="top">RX</td>
+  			  	            				            <td valign="top">Current : {{ rxcurrent }} </td>
+  			  	            				            <td valign="top">Average : {{ rxaverage }} </td>
+  			  	            				            <td valign="top">Maximum : {{ rxmaximum }} </td>
+  			  	            				            <!-- <td valign="top">Deviation Count : {{ rx_dev_count }} </td> -->
+  			  	            	<!-- 			            <td valign="top">Max Dev. : {{ rx_max_dev }} </td>
+  			  	            				            <td valign="top">Min Dev. : {{ rx_min_dev }} </td> -->
   			  	            				        </tr>
   			  	            				        <tr>
-  			  	            				            <td>Signal to Noise</td>
-  			  	            				            <td>Current : {{ snrcurrent }} </td>
-  			  	            				            <td>Average : {{ snraverage }} </td>
-  			  	            				            <td>Maximum : {{ snrmaximum }} </td>
-  			  	            				            <td>Deviation Count : {{ snr_dev_count }} </td>
-  			  	            				            <td>Max Dev. : {{ snr_max_dev }} </td>
-  			  	            				            <td>Min Dev. : {{ snr_min_dev }} </td>
+  			  	            				            <td valign="top">Signal to Noise</td>
+  			  	            				            <td valign="top">Current : {{ snrcurrent }} </td>
+  			  	            				            <td valign="top">Average : {{ snraverage }} </td>
+  			  	            				            <td valign="top">Maximum : {{ snrmaximum }} </td>
+  			  	            				     <!--        <td valign="top">Deviation Count : {{ snr_dev_count }} </td>
+  			  	            				            <td valign="top">Max Dev. : {{ snr_max_dev }} </td>
+  			  	            				            <td valign="top">Min Dev. : {{ snr_min_dev }} </td> -->
   			  	            				        </tr>
   			  	            				    </tbody>
   			  	            				</table>
   			  	            				<br>
   			  	            				<label style="text-align: center;width: 100%;">CM Traffic</label>
   			  	            				<div id="bw_chart" style="width: 100%; height: 400px;margin-bottom: 10px; border: 2px solid #a7a7a7;"></div>
-  			  	            				<table style="width:100%; margin-left:2%; margin-bottom:10px; font-weight:bold; font-size:13px;text-align: center;">
+  			  	            				<table class="parameters-guide">
   			  	            				    <tbody>
   			  	            				        <tr *ngIf="hsf_value" >
   			  	            				            <td style="padding-bottom:15px;text-align: center;" colspan="7">
-  			  	            				                <div style="margin-left:-100px;">
+  			  	            				    
   			  	            				                    {{ drop_graph_end }}                
   			  	            				                    to 
   			  	            				                    {{ drop_graph_end }} 
-  			  	            				                </div>
+  			  	            				      
   			  	            				            </td>
   			  	            				        </tr>
   			  	            				        <tr>
-  			  	            				            <td>Ping</td>
-  			  	            				            <td>Current : {{ ping_current }} ms</td>
-  			  	            				            <td>Average : {{ ping_average }} ms</td>
-  			  	            				            <td colspan="2">Maximum : {{ ping_maximum }} ms</td>
+  			  	            				            <td valign="top">Ping</td>
+  			  	            				            <td valign="top">Current : {{ ping_current }} ms</td>
+  			  	            				            <td valign="top">Average : {{ ping_average }} ms</td>
+  			  	            				            <td valign="top" colspan="2">Maximum : {{ ping_maximum }} ms</td>
   			  	            				        </tr>
   			  	            				        <tr>
-  			  	            				            <td>Download</td>
-  			  	            				            <td>Current : {{ dl_current }} </td>
-  			  	            				            <td>Average : {{ dl_average }} </td>
-  			  	            				            <td>Maximum : {{ dl_maximum }} </td>
-  			  	            				            <td>Total In : {{ total_in }}</td>
+  			  	            				            <td valign="top">Download</td>
+  			  	            				            <td valign="top">Current : {{ dl_current }} </td>
+  			  	            				            <td valign="top">Average : {{ dl_average }} </td>
+  			  	            				            <td valign="top">Maximum : {{ dl_maximum }} </td>
+  			  	            				            <td valign="top">Total In : {{ total_in }}</td>
   			  	            				        </tr>
   			  	            				        <tr>
-  			  	            				            <td>Upload</td>
-  			  	            				            <td>Current : {{ ul_current }} </td>
-  			  	            				            <td>Average : {{ ul_average }} </td>
-  			  	            				            <td>Maximum : {{ ul_maximum }} </td>
-  			  	            				            <td>Total Out : {{ total_out }}</td>
+  			  	            				            <td valign="top">Upload</td>
+  			  	            				            <td valign="top">Current : {{ ul_current }} </td>
+  			  	            				            <td valign="top">Average : {{ ul_average }} </td>
+  			  	            				            <td valign="top">Maximum : {{ ul_maximum }} </td>
+  			  	            				            <td valign="top">Total Out : {{ total_out }}</td>
   			  	            				        </tr>
   			  	            				    </tbody>
   			  	            				</table>
@@ -596,7 +759,8 @@
 	  										<tbody>
 	  											<tr>
 	  												<th width="25%">Status</th>
-	  												<td>N/A</td>
+	  												<td *ngIf="incident_nhm_length > 0">NHM - {{incident_nhm.NH_ID}}</td>
+	  												<td *ngIf="incident_nhm_length == 0">N/A</td>
 	  											</tr>
 	  										</tbody>
 	  									</table>
@@ -614,11 +778,11 @@
 	  			            				<tbody>
 	  			            					<tr>
 	  			            						<th width="25%">FNPR</th>
-	  			            						<td>N/A</td>
+	  			            						<td>{{fnpr_ctr}}</td>
 	  			            					</tr>
 	  			            					<tr>
 	  			            						<td>NDC</td>
-	  			            						<td>N/A</td>
+	  			            						<td>{{ndc_ctr}}</td>
 	  			            					</tr>
 	  			            				</tbody>
 	  			            			</table>
@@ -648,11 +812,48 @@
 	  			            	</div>
 	  			            </div>
 
+	  			            <div class="col-lg-12" *ngIf="cm_parameters">
+	  			            	<div class="block margin-bottom-sm">
+	  			            		<div class="title">
+	  			            			<strong>DS x US Channels</strong>
+	  			            		</div>
+	  			            		<div class="table-responsive"> 
+	  			            			<table class="table table-striped table-bordered">
+	  			            				<tbody>
+	  			            					<tr>
+	  			            						<th width="25%">Bonded</th>
+	  			            						<th width="25%">Actual</th>
+	  			            						<th width="50%">Impaired Port</th>
+	  			            					</tr>
+	  			            					<tr *ngIf="impaired_cm_length == 0">
+	  			            						<td colspan="3" class="text-center">No CM Impairment to Display</td>
+	  			            					</tr>
+                                <tr *ngIf="impaired_cm_length > 0">
+                                  <td>{{impaired_cm.bonded}}</td>
+                                  <td>{{impaired_cm.actual}}</td>
+                                  <td>{{impaired_cm.impared_port}}</td>
+                                </tr>
+	  			            				</tbody>
+	  			            			</table>
+	  			            		</div>
+	  			            	</div>
+	  			            </div>
+	  			            
 	  			            <div class="col-lg-12" *ngIf="upstream">
 	  			            	<div class="block margin-bottom-sm">
 	  			            		<div class="title">
 	  			            			<strong>Node Parameters</strong>
 	  			            		</div>
+                          <!-- <button class="btn btn-sm btn-outline-secondary" (click)="upstreamView('fec_snr', 0)" style="margin: 10px;">Reload</button> -->
+                          <div style="float: right;margin: 10px;">
+                            <label style="margin-right: .5rem;">Select Span</label> 
+                            <select #mySelectPlantSpanGraph (change)="getHistoricGraph(mySelectPlantSpanGraph.value, 'cmts_n_days', 'no', 'plant')">
+                              <option 
+                              class='option' 
+                              *ngFor='let option of span_options_plant' 
+                              [value]="option.val">{{option.text_val}}</option>
+                            </select>
+                          </div>
 	  			            		<div class="table-responsive"> 
 	  			            			<table class="table table-bordered">
 	  			            				<tbody>
@@ -680,32 +881,24 @@
 	  			            			<strong>Historical Graphs</strong>
 	  			            		</div>
 	  			            		<div style="background: white;" >
-	  			            			<button class="btn btn-sm btn-outline-secondary" (click)="upstreamView('fec_snr', 0)" style="margin: 10px;">Reload</button>
-	  			            			<div style="float: right;margin: 10px;">
-	  			            				<label style="margin-right: .5rem;">Select Span</label> 
-	  			            				<select #mySelectPlantSpanGraph (change)="getHistoricGraph(mySelectPlantSpanGraph.value, 'cmts_n_days', 'no', 'plant')">
-	  			            					<option 
-	  			            					class='option' 
-	  			            					*ngFor='let option of span_options_plant' 
-	  			            					[value]="option.val">{{option.text_val}}</option>
-	  			            				</select>
-	  			            			</div>
+
 	  			            			<div class="container-fluid">
 	  			            				<!-- <button (click)="upstreamView('snr', 0)">SNR</button> -->
 	  			            				<div *ngFor="let us_plant of upstream | keyvalue;index as i" >
 	  			            					<div *ngIf="i === port_active" style="padding-bottom: 6px;">
+                                  <br>
 	  			            						<label style="text-align: center;width: 100%;">FEC</label> 	
 			  			            				<div id="usn_chart{{i}}" style="width: 100%; height: 400px;margin-bottom: 10px; border: 2px solid #a7a7a7;"></div>
 			  			            				<div class="cmts_summary">
-			  			            				    <table style="width:100%; margin-bottom:10px; font-weight:bold; font-size:13px;text-align: center;">
+			  			            				    <table class="parameters-guide">
 			  			            				        <tbody>
 			  			            				            <tr ng-if="cmts_date_srange" >
 			  			            				                <td style="padding-bottom:15px;text-align: center;" colspan="7">
-			  			            				                    <div>
+			  			            				            
 			  			            				                        {{ plant_graph_start }}                
 			  			            				                        to 
 			  			            				                        {{ plant_graph_end }} 
-			  			            				                    </div>
+			  			            				              
 			  			            				                </td>
 			  			            				            </tr>
 			  			            				            <tr>
@@ -725,21 +918,21 @@
 			  			            				</div>
 			  			            				<label style="text-align: center;width: 100%;">SNR</label> 	
 			  			            				<div id="usn_chart{{i}}snr" style="width: 100%; height: 400px;margin-bottom: 10px; border: 2px solid #a7a7a7;"></div>
-			  			            					 <table style="width:100%; margin-bottom:10px; font-weight:bold; font-size:13px;text-align: center;">
+			  			            					 <table class="parameters-guide">
 			  			            					    <tbody>
 			  			            					        <tr ng-if="cmts_date_srange" >
 			  			            					            <td style="padding-bottom:15px;text-align: center;" colspan="7">
-			  			            				                    <div>
+			  			            				   
 			  			            				                        {{ plant_graph_start }}                
 			  			            				                        to 
 			  			            				                        {{ plant_graph_end }} 
-			  			            				                    </div>
+			  			            				          
 			  			            					            </td>
 			  			            					        </tr>
 			  			            					        <tr>
-			  			            					            <td>Current : {{ tracurrent }}</td>
-			  			            					            <td>Average : {{ traaverage }}</td>
-			  			            					            <td>Maximum : {{ tramaximum }}</td>
+			  			            					            <td>Current : {{ snrcurrent_p }}</td>
+			  			            					            <td>Average : {{ snraverage_p }}</td>
+			  			            					            <td>Maximum : {{ snrmaximum_p }}</td>
 			  			            					        </tr>
 			  			            					    </tbody>
 			  			            					</table>
@@ -786,24 +979,24 @@
 	  												
 	  											</tr>
 	  											<tr>
-	  												<th width="20%">US Util Pave</th>
-	  												<td width="30%">N/A</td>
+	  												<th width="20%">US Util P<sub>ave</sub> </th>
+	  												<td width="30%">{{ upstream_summary.us_util_avg }}</td>
 	  												<th width="20%">US Util %</th>
-	  												<td width="30%">N/A</td>
+	  												<td width="30%" [ngClass]="upstream_summary.us_util_status">{{ upstream_summary.us_util_percentage }} %</td>
 	  												
 	  											</tr>
 	  											<tr>
-	  												<th width="20%">DS Util Pave</th>
-	  												<td width="30%">{{ downstream_summary.ds_util_avg }}</td>
-	  												<th width="20%">DS 95th Util</th>
-	  												<!-- <td width="30%">{{ downstream_summary._95th_percentile }}</td> -->
+	  												<th width="20%">DS Util P<sub>ave</sub> </th>
+	  												<td width="30%">{{ downstream_summary.ds_util_max_avg }}</td>
+	  												<th width="20%">DS 95<sup>th</sup> Util</th>
+	  												<td width="30%">{{ downstream_summary._95th_percentile }}</td>
 	  												
 	  											</tr>
 	  											<tr>
 	  												<th width="20%">DS Util %</th>
-	  												<td [ngClass]="downstream_summary.ds_util_status" width="30%">{{ downstream_summary.ds_util_percentage }} %</td>
-	  												<th width="20%">DS 95th %</th>
-	  												<!-- <td [ngClass]="downstream_summary._95th_percentile_status" width="30%">{{ downstream_summary._95th_percentile_percentage }} %</td> -->
+	  												<td [ngClass]="downstream_summary.ds_util_status" width="30%">{{ downstream_summary.ds_util_max_avg_percentage }} %</td>
+	  												<th width="20%">DS 95<sup>th</sup> %</th>
+	  												<td [ngClass]="downstream_summary._95th_percentile_status" width="30%">{{ downstream_summary._95th_percentile_percentage }} %</td>
 	  												
 	  											</tr>
 	  											
@@ -820,16 +1013,26 @@
 	  									<strong>Historical Graphs</strong>
 	  								</div>
 	  								<div class="btn-group btn-group-toggle" data-toggle="buttons">
-	  								  <button class="btn btn-secondary active" (click)="UsDsToggle('us')">
+	  								  <button class="btn btn-secondary btn-sm active" (click)="UsDsToggle('us')">
 	  								    <input type="radio" name="options" id="option1" autocomplete="off" checked> US Utilization
 	  								  </button>
-	  								  <button class="btn btn-secondary" (click)="UsDsToggle('ds')">
+	  								  <button class="btn btn-secondary btn-sm" (click)="UsDsToggle('ds')">
 	  								    <input type="radio" name="options" id="option3" autocomplete="off"> DS Utilization
 	  								  </button>
 	  								</div>
 	  								<br>
 	  								<br>
 	  								<div *ngIf="us_toggle">
+                      <!-- <button class="btn btn-sm btn-outline-secondary" style="margin: 10px;">Reload</button> -->
+                      <div style="float: right;margin: 10px;">
+                        <label style="margin-right: .5rem;">Select Span</label> 
+                        <select [(ngModel)]="selectedSpanCore" (change)="getHistoricGraph(selectedSpanCore, 'cmts_days', 'no', 'core')">
+                          <option value="1">24 Hrs</option>
+                          <option value="3" selected>3 Days</option>
+                          <option value="7">1 Week</option>
+                          <option value="31">1 Month</option>
+                        </select>
+                      </div>
 		  								<div class="table-responsive"> 
 		  									<table class="table table-striped">
 		  										<tbody>
@@ -851,16 +1054,7 @@
 		  								</div>
 		  								<br>
 		  								<div style="background: white;" >
-		  									<button class="btn btn-sm btn-outline-secondary" style="margin: 10px;">Reload</button>
-		  									<div style="float: right;margin: 10px;">
-		  										<label style="margin-right: .5rem;">Select Span</label> 
-		  										<select [(ngModel)]="selectedSpanCore" (change)="getHistoricGraph(selectedSpanCore, 'cmts_days', 'no', 'core')">
-		  											<option value="1">24 Hrs</option>
-		  											<option value="3" selected>3 Days</option>
-		  											<option value="7">1 Week</option>
-		  											<option value="31">1 Month</option>
-		  										</select>
-		  									</div>
+
 
 		  									<!-- uncomment this pag pinapalitan, pag gusto ng nag iiba iba ang graph based sa selected port -->
 	<!-- 	  									<div *ngFor="let us_plant of upstream | keyvalue;index as i" >
@@ -869,25 +1063,25 @@
 				  									<div id="usn_chart{{i}}traffic" style="width: 100%; height: 400px;margin-bottom: 10px; border: 2px solid #a7a7a7;"></div>	
 				  								</div>
 				  							</div> -->
-
+                        <br>
 				  							<label style="text-align: center;width: 100%;">US Utilization</label> 	
 				  							<div class="container-fluid" style="padding-bottom: 6px;">
 				  								<div id="cmts_uschart_traffic" style="width: 100%; height: 400px;margin-bottom: 10px; border: 2px solid #a7a7a7;"></div>
-				  								 <table style="width:100%; margin-bottom:10px; font-weight:bold; font-size:13px;text-align: center;">
+				  								 <table class="parameters-guide">
 				  								    <tbody>
 				  								        <tr ng-if="cmts_date_srange" >
 				  								            <td style="padding-bottom:15px;" colspan="7">
-				  								                <div>
+				  								            
 				  								                    {{ reformatData(cmts_date_srange + " " + cmts_time_srange) }}                
 				  								                    to 
 				  								                    {{ reformatData(cmts_date_erange + " " + cmts_time_erange) }} 
-				  								                </div>
+				  								 
 				  								            </td>
 				  								        </tr>
 				  								        <tr>
-				  								            <td>Current : {{ tracurrent }}</td>
-				  								            <td>Average : {{ traaverage }}</td>
-				  								            <td>Maximum : {{ tramaximum }}</td>
+				  								            <td style="width: 33.33%;">Current : {{ tracurrent }}</td>
+				  								            <td style="width: 33.33%;">Average : {{ traaverage }}</td>
+				  								            <td style="width: 33.33%;">Maximum : {{ tramaximum }}</td>
 				  								        </tr>
 				  								    </tbody>
 				  								</table>
@@ -905,7 +1099,16 @@
 		  								</div>
 		  							</div>
 		  							<div *ngIf="ds_toggle">
-
+                      <!-- <button class="btn btn-sm btn-outline-secondary" style="margin: 10px;">Reload</button> -->
+                      <div style="float: right;margin: 10px;">
+                        <label style="margin-right: .5rem;">Select Span</label> 
+                        <select [(ngModel)]="selectedSpanDSCore" (change)="spanDSCore(selectedSpanDSCore)">
+                          <option value="1">24 Hrs</option>
+                          <option value="3" selected>3 Days</option>
+                          <option value="7">1 Week</option>
+                          <option value="31">1 Month</option>
+                        </select>
+                      </div>
 		  								<div class="table-responsive"> 
 		  									<table class="table table-striped">
 		  										<tbody>
@@ -926,21 +1129,12 @@
 		  								</div>
 		  								<br>
 		  								<div style="background: white;" >
-		  									<button class="btn btn-sm btn-outline-secondary" style="margin: 10px;">Reload</button>
-		  									<div style="float: right;margin: 10px;">
-		  										<label style="margin-right: .5rem;">Select Span</label> 
-				  								<select [(ngModel)]="selectedSpanDSCore" (change)="spanDSCore(selectedSpanDSCore)">
-				  									<option value="1">24 Hrs</option>
-				  									<option value="3" selected>3 Days</option>
-				  									<option value="7">1 Week</option>
-				  									<option value="31">1 Month</option>
-				  								</select>
-		  									</div>
 
+                        <br>
 				  							<label style="text-align: center;width: 100%;">DS Utilization</label> 	
 				  							<div class="container-fluid" style="padding-bottom: 6px;">
 	                                            <div id="dsn_chart0" style="width: 100%; height: 400px;margin-bottom: 10px; border: 2px solid #a7a7a7;"> </div>
-				  								 <table style="width:100%; margin-bottom:10px; font-weight:bold; font-size:13px;text-align: center;">
+				  								 <table style="width:100%; margin-bottom:10px; font-weight:bold; font-size:8px;text-align: center;">
 				  								    <tbody>
 				  								        <tr ng-if="cmts_date_srange" >
 				  								            <td style="padding-bottom:15px;" colspan="7">

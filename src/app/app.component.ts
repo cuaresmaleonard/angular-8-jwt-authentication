@@ -32,13 +32,21 @@ export class AppComponent {
     }
     
     ngOnInit() {
-        this.viewProfile();
+        if (this.currentUserInfo)
+        {
+            this.viewProfile();
+        }
+        
 
     }
 
     viewProfile() {
         this.http.post<any>('http://182.18.194.188/nms/authbasic/view_profile', []).subscribe(data => {
-            this.profile = data[0];
+            if (data.length > 0) 
+            {
+                this.profile = data[0];
+            }
+
         });
     }
 

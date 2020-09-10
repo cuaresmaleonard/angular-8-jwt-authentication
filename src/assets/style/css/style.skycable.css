@@ -824,7 +824,7 @@ nav#sidebar li a:hover {
 }
 
 nav#sidebar li a:hover i {
-  color: #0008b1;
+  color: #ffffff;
 }
 
 nav#sidebar li a i {
@@ -862,7 +862,7 @@ nav#sidebar li::before {
 }
 
 nav#sidebar li.active::before {
-  background: #0008b1;
+  background: #ffffff;
 }
 
 nav#sidebar li.active > a {
@@ -871,7 +871,7 @@ nav#sidebar li.active > a {
 }
 
 nav#sidebar li.active i {
-  color: #0008b1;
+  color: #ffffff;
 }
 
 nav#sidebar li li.active > a {
@@ -1799,7 +1799,7 @@ input[type='submit'] {
 }
 
 .custom-select:focus {
-  border-color: #0008b1;
+  border-color: #c1c1c1;
   outline: 0;
   -webkit-box-shadow: none;
   box-shadow: none;
